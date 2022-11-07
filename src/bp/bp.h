@@ -65,6 +65,8 @@ typedef struct Bp_Recovery_Info_struct {
                                 // prediction.
   Flag late_bp_recovery_wrong;  // TRUE if recovery is due to a late branch
                                 // prediction that is wrong.
+  Flag decode_recovery;         // TRUE if recovery is due to a redirect 
+                                // from a btb miss at decode
 
 } Bp_Recovery_Info;
 
@@ -178,6 +180,7 @@ typedef enum Bp_Id_enum {
   HYBRIDGP_BP,
   TAGESCL_BP,
   TAGESCL80_BP,
+  PC_TABLE_BP,
 #define DEF_CBP(CBP_NAME, CBP_CLASS) CBP_CLASS##_BP,
 #include "cbp_table.def"
 #undef DEF_CBP
