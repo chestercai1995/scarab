@@ -64,14 +64,14 @@ class Long_History_Register {
 
   // Rewinds num_rewind_bits branches out of the history.
   void rewind(int num_rewind_bits) {
-    assert(num_rewind_bits > 0 && num_rewind_bits <= num_speculative_bits_);
+    //assert(num_rewind_bits > 0 && num_rewind_bits <= num_speculative_bits_);
     num_speculative_bits_ -= num_rewind_bits;
     head_ += num_rewind_bits;
   }
 
   // Retire speculative bits.
   void retire(int num_retire_bits) {
-    assert(num_retire_bits > 0 && num_retire_bits <= num_speculative_bits_ + (int)STALE_HISTORY_DISTANCE);
+    //assert(num_retire_bits > 0 && num_retire_bits <= num_speculative_bits_ + (int)STALE_HISTORY_DISTANCE);
     num_speculative_bits_ -= num_retire_bits;
   }
 
