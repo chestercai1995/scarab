@@ -646,10 +646,7 @@ class Tage {
     }
     tage_histories_.path_history_ = prediction_info.path_history_checkpoint;
 
-    past_branches_queue.clear();
-    for(auto item:prediction_info.old_branch_checkpoint){
-      past_branches_queue.push_back(item);
-    }
+    past_branches_queue = prediction_info.old_branch_checkpoint;
   }
 
   void local_recover_speculative_state(
