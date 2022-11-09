@@ -28,6 +28,8 @@
 
 #include "utils.h"
 
+uint64_t count = 0;
+
 template <class TAGE_CONFIG>
 class Past_branch_entry;
 /* The main history register suitable for very large history. The history is
@@ -64,14 +66,16 @@ class Long_History_Register {
 
   // Rewinds num_rewind_bits branches out of the history.
   void rewind(int num_rewind_bits) {
-    //assert(num_rewind_bits > 0 && num_rewind_bits <= num_speculative_bits_);
+    assert(num_rewind_bits > 0 && num_rewind_bits <= num_speculative_bits_);
     num_speculative_bits_ -= num_rewind_bits;
     head_ += num_rewind_bits;
   }
 
   // Retire speculative bits.
   void retire(int num_retire_bits) {
-    //assert(num_retire_bits > 0 && num_retire_bits <= num_speculative_bits_ + (int)STALE_HISTORY_DISTANCE);
+    //assert(num_retire_bits > 0 && num_retire_bits <= num_speculative_bits_);
+    //printf("retiring branch, num_retire_bits = %d, num_speculative_bits = %d\n\n", num_retire_bits, num_speculative_bits_);
+    assert(num_retire_bits <= num_speculative_bits_);
     num_speculative_bits_ -= num_retire_bits;
   }
 
@@ -82,10 +86,10 @@ class Long_History_Register {
 
   int64_t head_idx() const { return head_; }
 
- private:
   int num_speculative_bits_ = 0;  // keeps track of how many bits can be
                                   // discarded during a rewind without losing
                                   // bits in the most significant position.
+ private:
   std::vector<bool> history_bits_;
   int64_t           head_ = 0;
   int64_t           buffer_size_;
@@ -264,6 +268,9 @@ class Tage_Histories {
   void push_into_history(uint64_t br_pc, uint64_t br_target,
                          Branch_Type br_type, bool branch_dir,
                          Tage_Prediction_Info<TAGE_CONFIG>* prediction_info) {
+    //printf("\n");
+    //printf("pc: %lx, target: %lx, is_cond:%d, is_ind:%d, br_dir:%d", br_pc, br_target, br_type.is_conditional, br_type.is_indirect, branch_dir);
+    //printf("\n\n");
     head_old_           = history_register_.head_idx();
     int num_bit_inserts = 2;
     if(br_type.is_indirect && !br_type.is_conditional) {
@@ -407,6 +414,21 @@ class Tage {
   void update_speculative_state(
     uint64_t br_pc, uint64_t br_target, Branch_Type br_type,
     bool final_prediction, Tage_Prediction_Info<TAGE_CONFIG>* prediction_info) {
+    //printf("PRE BRANCH at PC %lx, count %ld\n", br_pc, count);
+    //printf("History is: ");
+    //for(int i = 0; i<100; i++){
+    //  printf("%d", tage_histories_.history_register_[i]);
+    //}
+    //printf("\n");
+    //printf("Q contains :");
+    //for(auto item:past_branches_queue){
+    //  printf("br:%lx, ", item.br_pc);
+    //}
+    //printf("\n");
+    //count++;
+    for(auto item:past_branches_queue){
+      prediction_info->old_branch_checkpoint.push_back(item);
+    }
     if(STALE_HISTORY_DISTANCE != 0){
       Past_branch_entry<TAGE_CONFIG> temp;
       temp.br_pc = br_pc;
@@ -414,16 +436,13 @@ class Tage {
       temp.br_type = br_type;
       temp.branch_dir = final_prediction;
       temp.prediction_info = prediction_info;
-      past_branches_queue.push_back(temp);
       if(past_branches_queue.size() == STALE_HISTORY_DISTANCE){
         Past_branch_entry<TAGE_CONFIG> oldest = past_branches_queue.front();
         tage_histories_.push_into_history(oldest.br_pc, oldest.br_target, oldest.br_type,
-                                          oldest.branch_dir, oldest.prediction_info);
+                                          oldest.branch_dir, prediction_info);
         past_branches_queue.pop_front();
       }
-      for(auto item:past_branches_queue){
-        prediction_info->old_branch_checkpoint.push_back(item);
-      }
+      past_branches_queue.push_back(temp);
     }
     else{
       tage_histories_.push_into_history(br_pc, br_target, br_type,
@@ -668,7 +687,11 @@ class Tage {
     Saturating_Counter<TAGE_CONFIG::USEFUL_BITS, false>       useful;
     int                                                       tag = 0;
 
-    Tagged_Entry() : pred_counter(0), useful(0) {}
+    //chester second counter
+    Saturating_Counter<TAGE_CONFIG::PRED_COUNTER_WIDTH, true> pred_counter_future;
+    Saturating_Counter<TAGE_CONFIG::USEFUL_BITS, false>       useful_future;
+
+    Tagged_Entry() : pred_counter(0), useful(0), pred_counter_future(0), useful_future(0){}
   };
 
   void initialize_tag_bits(void);
@@ -699,7 +722,10 @@ class Tage {
     tagged_table_ptrs_[Tage_Histories<TAGE_CONFIG>::twice_num_histories_ + 1];
 
   // Predictor State
+  public:
   Tage_Histories<TAGE_CONFIG> tage_histories_;
+  //uint64_t counter;
+  private:
   Bimodal_Entry bimodal_table_[1 << TAGE_CONFIG::BIMODAL_LOG_TABLES_SIZE];
   Tagged_Entry
     low_history_tagged_table_[TAGE_CONFIG::SHORT_HISTORY_NUM_BANKS *
@@ -713,7 +739,7 @@ class Tage {
   int tick_;  // for resetting the useful bits
 
   Random_Number_Generator& random_number_gen_;
-  
+  public: 
   std::deque<Past_branch_entry<TAGE_CONFIG>> past_branches_queue;
 };
 
