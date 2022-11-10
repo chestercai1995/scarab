@@ -83,6 +83,7 @@ DEF_PARAM(  btb_entries               , BTB_ENTRIES               , uns     , un
 DEF_PARAM(  btb_assoc                 , BTB_ASSOC                 , uns     , uns        , 4          ,        )
 DEF_PARAM(  btb_off_path_writes       , BTB_OFF_PATH_WRITES       , Flag    , Flag       , TRUE       ,        ) /* const */
 
+DEF_PARAM(  use_2_bit_counter_in_l0   , USE_2_BIT_COUNTER_IN_L0   , Flag    , Flag       , FALSE      ,        ) 
 DEF_PARAM(  l0_btb_size               , L0_BTB_SIZE               , uns     , uns        , 4          ,        )
 DEF_PARAM(  l0_btb_assoc              , L0_BTB_ASSOC              , uns     , uns        , 4          ,        )
 DEF_PARAM(  stale_history_distance    , STALE_HISTORY_DISTANCE    , uns     , uns        , 0          ,        )
