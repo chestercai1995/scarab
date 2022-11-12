@@ -49,6 +49,13 @@ struct conditional_type<false, T, F> {
   typedef F type;
 };
 
+struct Future_tage_pred{
+  uint64_t pc;
+  uint64_t target;
+  bool pred;
+};
+
+
 template <int width>
 struct Smallest_Int_Type {
   // This is logically equivalent to the following code assuming you could use

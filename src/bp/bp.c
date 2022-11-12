@@ -358,6 +358,9 @@ Addr bp_predict_op(Bp_Data* bp_data, Op* op, uns br_num, Addr fetch_addr) {
     case CF_BR:
       op->oracle_info.pred      = TAKEN;
       op->oracle_info.late_pred = TAKEN;
+      if(BP_MECH == PC_TABLE_BP || BP_MECH == FUTURE_TAGE_BP){
+        op->oracle_info.pred    = bp_data->bp->pred_func(op);
+      }
       if(!op->off_path)
         STAT_EVENT(op->proc_id, CF_BR_USED_TARGET_CORRECT +
                                   (pred_target != op->oracle_info.npc));
@@ -395,6 +398,9 @@ Addr bp_predict_op(Bp_Data* bp_data, Op* op, uns br_num, Addr fetch_addr) {
     case CF_CALL:
       op->oracle_info.pred      = TAKEN;
       op->oracle_info.late_pred = TAKEN;
+      if(BP_MECH == PC_TABLE_BP || BP_MECH == FUTURE_TAGE_BP){
+        op->oracle_info.pred    = bp_data->bp->pred_func(op);
+      }
       if(ENABLE_CRS)
         CRS_REALISTIC ? bp_crs_realistic_push(bp_data, op) :
                         bp_crs_push(bp_data, op);

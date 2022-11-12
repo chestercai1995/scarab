@@ -38,6 +38,7 @@ class Tage_SC_L_Base {
  public:
   virtual int64_t get_new_branch_id()                                 = 0;
   virtual bool    get_prediction(int64_t branch_id, uint64_t br_pc)   = 0;
+  virtual Future_tage_pred    get_future_pred(int64_t branch_id, uint64_t br_pc)   = 0;
   virtual void    update_speculative_state(int64_t branch_id, uint64_t br_pc,
                                            Branch_Type br_type, bool branch_dir,
                                            uint64_t br_target)        = 0;
@@ -87,6 +88,9 @@ class Tage_SC_L : public Tage_SC_L_Base {
   // It uses the speculative state of the predictor to generate a prediction.
   // Should be called before update_speculative_state.
   bool get_prediction(int64_t branch_id, uint64_t br_pc) override;
+
+
+  Future_tage_pred get_future_pred(int64_t branch_id, uint64_t br_pc) override;
 
   // It updates the speculative state (e.g. to insert history bits in Tage's
   // global history register). For conditional branches, it should be called
@@ -164,6 +168,35 @@ bool Tage_SC_L<CONFIG>::get_prediction(int64_t branch_id, uint64_t br_pc) {
     prediction_info.final_prediction = prediction_info.sc.prediction;
   }
   return prediction_info.final_prediction;
+}
+
+template <class CONFIG>
+Future_tage_pred Tage_SC_L<CONFIG>::get_future_pred(int64_t branch_id, uint64_t br_pc) {
+  auto& prediction_info = prediction_info_buffer_[branch_id];
+
+  // First, use Tage to make a prediction.
+  Future_tage_pred result = tage_.get_future_prediction(br_pc, &prediction_info.tage);
+  prediction_info.tage_or_loop_prediction = prediction_info.tage.prediction;
+
+  //if(CONFIG::USE_LOOP_PREDICTOR) {
+  //  // Then, look up the loop predictor and override Tage's prediction if
+  //  // the
+  //  // loop predictor is found to be beneficial.
+  //  loop_predictor_.get_prediction(br_pc, &prediction_info.loop);
+  //  if(loop_predictor_beneficial_.get() >= 0 && prediction_info.loop.valid) {
+  //    prediction_info.tage_or_loop_prediction = prediction_info.loop.prediction;
+  //  }
+  //}
+
+  //if(!CONFIG::USE_SC) {
+  //  prediction_info.final_prediction = prediction_info.tage_or_loop_prediction;
+  //} else {
+  //  statistical_corrector_.get_prediction(
+  //    br_pc, prediction_info.tage, prediction_info.tage_or_loop_prediction,
+  //    &prediction_info.sc);
+  //  prediction_info.final_prediction = prediction_info.sc.prediction;
+  //}
+  return result;
 }
 
 template <class CONFIG>

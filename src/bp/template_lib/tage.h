@@ -28,8 +28,6 @@
 
 #include "utils.h"
 
-uint64_t count = 0;
-
 template <class TAGE_CONFIG>
 class Past_branch_entry;
 /* The main history register suitable for very large history. The history is
@@ -344,22 +342,8 @@ class Tage {
   }
 
   void get_prediction(
-    uint64_t cur_br_pc, Tage_Prediction_Info<TAGE_CONFIG>* prediction_info) const {
-    uint64_t br_pc = cur_br_pc;
-    bool nt_override = false;
-    if(TAGE_CONFIG::USE_STALE_HIST_PC != 0){
-      if(past_branches_queue.size() != STALE_HISTORY_DISTANCE){
-        br_pc = 0;
-      }
-      else{
-        br_pc = past_branches_queue.front().br_pc;
-      }
-    }
-    //TODO: figure out how to set nt_override
-    //ask siavash, is there anyway to get cycle number here?
-    if(){
-      nt_override = true;
-    }
+    uint64_t br_pc, Tage_Prediction_Info<TAGE_CONFIG>* prediction_info) const {
+    assert(!TAGE_CONFIG::USE_STALE_HIST_PC);
     fill_table_indices_tags(br_pc, prediction_info);
     auto& indices = prediction_info->indices;
     auto& tags    = prediction_info->tags;
@@ -410,8 +394,96 @@ class Tage {
       } else {
         prediction_info->prediction = prediction_info->alt_prediction;
       }
-      if(nt_override){
-        prediction_info->prediction = false;
+
+      // REVISIT: this seems buggy, only works for COUNTER_BITS = 3
+      prediction_info->high_confidence =
+        std::abs(2 * longest_match_counter + 1) >=
+        ((1 << TAGE_CONFIG::PRED_COUNTER_WIDTH) - 1);
+      prediction_info->medium_confidence = std::abs(2 * longest_match_counter +
+                                                    1) == 5;
+      prediction_info->low_confidence    = std::abs(2 * longest_match_counter +
+                                                 1) == 1;
+    }
+  }
+
+  Future_tage_pred get_future_prediction(
+    uint64_t cur_br_pc, Tage_Prediction_Info<TAGE_CONFIG>* prediction_info) const {
+    assert(TAGE_CONFIG::USE_STALE_HIST_PC);
+    Future_tage_pred result;
+    uint64_t br_pc = cur_br_pc;
+    if(TAGE_CONFIG::USE_STALE_HIST_PC != 0){
+      if(past_branches_queue.size() != STALE_HISTORY_DISTANCE){
+        br_pc = 0;
+      }
+      else{
+        br_pc = past_branches_queue.front().br_pc;
+      }
+    }
+    fill_table_indices_tags(br_pc, prediction_info);
+    auto& indices = prediction_info->indices;
+    auto& tags    = prediction_info->tags;
+
+    // First use the bimodal table to make an initial prediction.
+    Bimodal_Output bimodal_output    = get_bimodal_prediction_confidence(br_pc);
+    prediction_info->alt_prediction  = bimodal_output.prediction;
+    prediction_info->alt_confidence  = bimodal_output.confidence;
+    prediction_info->high_confidence = prediction_info->alt_confidence;
+    prediction_info->medium_confidence = false;
+    prediction_info->low_confidence    = !prediction_info->high_confidence;
+    prediction_info->prediction        = prediction_info->alt_prediction;
+    prediction_info->longest_match_prediction = prediction_info->alt_prediction;
+
+    int   bimodal_index = (br_pc ^ (br_pc >> 2)) &
+              ((1 << TAGE_CONFIG::BIMODAL_LOG_TABLES_SIZE) - 1);
+    result.pc = bimodal_table_[bimodal_index].pc;
+    result.target = bimodal_table_[bimodal_index].target;
+    result.pred = bimodal_output.prediction;
+
+    // Find matching tagged tables and update prediction and alternate
+    // prediction
+    // if necessary.
+
+    Matched_Table_Banks matched_banks = get_two_longest_matching_tables(indices,
+                                                                        tags);
+    prediction_info->hit_bank         = matched_banks.hit_bank;
+    prediction_info->alt_bank         = matched_banks.alt_bank;
+    if(prediction_info->hit_bank != 0) {
+      int8_t longest_match_counter =
+        tagged_table_ptrs_[prediction_info->hit_bank]
+                          [indices[prediction_info->hit_bank]]
+                            .pred_counter.get();
+      prediction_info->longest_match_prediction = longest_match_counter >= 0;
+      if(prediction_info->alt_bank != 0) {
+        int8_t alt_match_counter =
+          tagged_table_ptrs_[prediction_info->alt_bank]
+                            [indices[prediction_info->alt_bank]]
+                              .pred_counter.get();
+        prediction_info->alt_prediction = alt_match_counter >= 0;
+        prediction_info->alt_confidence = std::abs(2 * alt_match_counter + 1) >
+                                          1;
+      }
+
+      int alt_selector_table_index = (((prediction_info->hit_bank - 1) / 8)
+                                      << 1) +
+                                     (prediction_info->alt_confidence ? 1 : 0);
+      alt_selector_table_index =
+        alt_selector_table_index %
+        ((1 << TAGE_CONFIG::ALT_SELECTOR_LOG_TABLE_SIZE) - 1);
+      bool use_alt = alt_selector_table_[alt_selector_table_index].get() >= 0;
+      if((!use_alt) || std::abs(2 * longest_match_counter + 1) > 1) {
+        prediction_info->prediction = prediction_info->longest_match_prediction;
+        result.pc = tagged_table_ptrs_[prediction_info->hit_bank]
+                      [indices[prediction_info->hit_bank]].pc;
+        result.target = tagged_table_ptrs_[prediction_info->hit_bank]
+                      [indices[prediction_info->hit_bank]].target;
+        result.pred = prediction_info->prediction;
+      } else {
+        prediction_info->prediction = prediction_info->alt_prediction;
+        result.pc = tagged_table_ptrs_[prediction_info->alt_bank]
+                      [indices[prediction_info->alt_bank]].pc;
+        result.target = tagged_table_ptrs_[prediction_info->alt_bank]
+                      [indices[prediction_info->alt_bank]].target;
+        result.pred = prediction_info->prediction;
       }
 
       // REVISIT: this seems buggy, only works for COUNTER_BITS = 3
@@ -423,6 +495,7 @@ class Tage {
       prediction_info->low_confidence    = std::abs(2 * longest_match_counter +
                                                  1) == 1;
     }
+    return result;
   }
 
   void update_speculative_state(
@@ -694,6 +767,10 @@ class Tage {
   struct Bimodal_Entry {
     int8_t hysteresis = 1;
     int8_t prediction = 0;
+
+    //chester future tage
+    uint64_t pc = 0;
+    uint64_t target = 0;
   };
 
   struct Tagged_Entry {
@@ -701,11 +778,11 @@ class Tage {
     Saturating_Counter<TAGE_CONFIG::USEFUL_BITS, false>       useful;
     int                                                       tag = 0;
 
-    //chester second counter
-    Saturating_Counter<TAGE_CONFIG::PRED_COUNTER_WIDTH, true> pred_counter_future;
-    Saturating_Counter<TAGE_CONFIG::USEFUL_BITS, false>       useful_future;
+    //chester future tage
+    uint64_t pc;
+    uint64_t target;
 
-    Tagged_Entry() : pred_counter(0), useful(0), pred_counter_future(0), useful_future(0){}
+    Tagged_Entry() : pred_counter(0), useful(0), pc(0), target(0){}
   };
 
   void initialize_tag_bits(void);

@@ -31,8 +31,7 @@ extern "C" {
 #include "statistics.h"
 }
 
-//#define DEBUG(proc_id, args...) _DEBUG(proc_id, DEBUG_BP_DIR, ##args)
-#define DEBUG(proc_id, args...) _DEBUG(proc_id, DEBUG_PC_TABLE, ##args)
+#define DEBUG(proc_id, args...) _DEBUG(proc_id, DEBUG_BP_DIR, ##args)
 
 namespace {
 
