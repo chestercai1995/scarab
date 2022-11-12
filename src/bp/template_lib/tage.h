@@ -346,8 +346,19 @@ class Tage {
   void get_prediction(
     uint64_t cur_br_pc, Tage_Prediction_Info<TAGE_CONFIG>* prediction_info) const {
     uint64_t br_pc = cur_br_pc;
-    if(STALE_PC_DISTANCE != 0){
-      br_pc = past_branches_queue.front().br_pc;
+    bool nt_override = false;
+    if(TAGE_CONFIG::USE_STALE_HIST_PC != 0){
+      if(past_branches_queue.size() != STALE_HISTORY_DISTANCE){
+        br_pc = 0;
+      }
+      else{
+        br_pc = past_branches_queue.front().br_pc;
+      }
+    }
+    //TODO: figure out how to set nt_override
+    //ask siavash, is there anyway to get cycle number here?
+    if(){
+      nt_override = true;
     }
     fill_table_indices_tags(br_pc, prediction_info);
     auto& indices = prediction_info->indices;
@@ -399,6 +410,9 @@ class Tage {
       } else {
         prediction_info->prediction = prediction_info->alt_prediction;
       }
+      if(nt_override){
+        prediction_info->prediction = false;
+      }
 
       // REVISIT: this seems buggy, only works for COUNTER_BITS = 3
       prediction_info->high_confidence =
@@ -429,7 +443,7 @@ class Tage {
     for(auto item:past_branches_queue){
       prediction_info->old_branch_checkpoint.push_back(item);
     }
-    if(STALE_HISTORY_DISTANCE != 0){
+    if(TAGE_CONFIG::USE_STALE_HIST_PC){
       Past_branch_entry<TAGE_CONFIG> temp;
       temp.br_pc = br_pc;
       temp.br_target = br_target;

@@ -88,6 +88,8 @@ DEF_PARAM(  l0_btb_assoc              , L0_BTB_ASSOC              , uns     , un
 DEF_PARAM(  stale_history_distance    , STALE_HISTORY_DISTANCE    , uns     , uns        , 0          ,        )
 DEF_PARAM(  stale_pc_distance         , STALE_PC_DISTANCE         , uns     , uns        , 0          ,        )
 
+DEF_PARAM(  future_distance           , FUTURE_DISTANCE           , uns     , uns        , 0          ,        )
+
 DEF_PARAM(  enable_crs                , ENABLE_CRS                , Flag    , Flag       , TRUE       ,        )
 DEF_PARAM(  crs_entries               , CRS_ENTRIES               , uns     , uns        , 32         ,        )     
      // CRS_REALISTIC --- 0:off_path does not disturb on_path 1: next & tos scheme (use this if you want a realistic CRS) 
