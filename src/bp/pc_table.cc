@@ -39,6 +39,7 @@ namespace {
 struct l0_btb_entry {
     Addr pc;
     Addr target;
+    int counter;
 };
 
 std::vector<Cache_cpp<l0_btb_entry>> l0_btbs_across_all_cores;
@@ -71,10 +72,13 @@ uns8 bp_pc_table_pred(Op* op) {
   Addr        pc          = op->inst_info->addr;
   auto&       l0_btb      = l0_btbs_across_all_cores.at(op->proc_id);
   Cache_access_result<l0_btb_entry> res = l0_btb.probe(op->proc_id, pc);
-  uns8 pred = res.hit;
+  Flag hit = res.hit;
+  Flag counter_taken = res.data.counter>1;
+  
   DEBUG(op->proc_id, "Predicting for op_num:%s addr:%s, p_dir:%d, t_dir:%d\n",
         unsstr64(op->op_num), hexstr64s(pc), pred, op->oracle_info.dir);
-  return pred; 
+  if(USE_2_BIT_COUNTER_IN_L0) return hit && counter_taken; 
+  else return hit;
 }
 
 void bp_pc_table_update(Op* op) {
@@ -92,16 +96,29 @@ void bp_pc_table_update(Op* op) {
   if(op->oracle_info.dir) {
     auto access_res = l0_btb.access(proc_id, pc);
     if(!access_res.hit){
-        l0_btb_entry new_entry = {pc, op->oracle_info.target};
+        l0_btb_entry new_entry = {pc, op->oracle_info.target, 2};
         auto insert_res = l0_btb.insert(proc_id, pc, /*is_prefetch =*/ FALSE, new_entry);
         if(!insert_res.hit){
           printf("nothing replaced\n");
         }
         DEBUG(proc_id, "write l0btb op %llu, pc=x%llx, repl: %d, replpc = %llx\n", op->op_num, pc, insert_res.hit, insert_res.line_addr);
     }
+    else 
+    {
+      int counter_val = access_res.data.counter;
+      if(counter_val<3) counter_val++;
+      l0_btb.data[access_res.cache_addr.set][access_res.cache_addr.way].counter = counter_val;
+    }
     DEBUG(proc_id, "Drop l0btb for l0btb hit op %llu\n", op->op_num);
   } 
   else{
     //DEBUG(proc_id, "Drop l0btb for NT op %llu\n", op->op_num);
+    auto access_res = l0_btb.probe(proc_id, pc);
+    if(access_res.hit)
+    {
+      int counter_val = access_res.data.counter;
+      if(counter_val>0) counter_val--;
+      l0_btb.data[access_res.cache_addr.set][access_res.cache_addr.way].counter = counter_val;
+    }
   }
 }
