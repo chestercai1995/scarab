@@ -28,7 +28,6 @@
 
 #include "utils.h"
 
-template <class TAGE_CONFIG>
 class Past_branch_entry;
 /* The main history register suitable for very large history. The history is
  * implemented as a circular buffer for efficiency. The API only allows
@@ -232,21 +231,19 @@ struct Tage_Prediction_Info {
   int     num_global_history_bits;
   int64_t global_history_head_checkpoint_;
   int64_t path_history_checkpoint;
-  std::deque<Past_branch_entry<TAGE_CONFIG>> old_branch_checkpoint; 
+  std::deque<Past_branch_entry> old_branch_checkpoint; 
   uint64_t pred_pc;
   bool used_bimodal;
   bool used_tagged;
   bool used_alt;
 };
 
-template <class TAGE_CONFIG>
 struct Past_branch_entry {
   public:
   uint64_t br_pc;
   uint64_t br_target;
   Branch_Type br_type;
   bool branch_dir;
-  Tage_Prediction_Info<TAGE_CONFIG>* prediction_info;
 
   Past_branch_entry(){
     br_pc = 0;
@@ -254,7 +251,6 @@ struct Past_branch_entry {
     br_type.is_conditional = false;
     br_type.is_indirect = false;
     branch_dir = false;
-    prediction_info = NULL;
   }
 };
 
@@ -514,15 +510,6 @@ class Tage {
       prediction_info->low_confidence    = std::abs(2 * longest_match_counter +
                                                  1) == 1;
     }
-    printf("\nPredicting br %lx, using br_pc %lx, predicted pc is %lx, Q has size %lu", cur_br_pc, br_pc, result.pc, past_branches_queue.size());
-    for(auto item:past_branches_queue){
-      printf("br:%lx, ", item.br_pc);
-    }
-    printf("\n history is: ");
-    for(int i = 0; i < 50; i++){
-      printf("%d", tage_histories_.history_register_[i]);
-    }
-    printf("\n");
     return result;
   }
 
@@ -544,24 +531,18 @@ class Tage {
       prediction_info->old_branch_checkpoint.push_back(item);
     }
     if(TAGE_CONFIG::USE_STALE_HIST_PC){
-      Past_branch_entry<TAGE_CONFIG> temp;
+      Past_branch_entry temp;
       temp.br_pc = br_pc;
       temp.br_target = br_target;
       temp.br_type = br_type;
       temp.branch_dir = final_prediction;
-      temp.prediction_info = prediction_info;
       if(past_branches_queue.size() == STALE_HISTORY_DISTANCE){
-        Past_branch_entry<TAGE_CONFIG> oldest = past_branches_queue.front();
+        Past_branch_entry oldest = past_branches_queue.front();
         tage_histories_.push_into_history(oldest.br_pc, oldest.br_target, oldest.br_type,
                                           oldest.branch_dir, prediction_info);
         past_branches_queue.pop_front();
       }
       past_branches_queue.push_back(temp);
-      printf("pushed an entry %lx in to past branch Q, size %lu\n", temp.br_pc, past_branches_queue.size());
-      for(auto item:past_branches_queue){
-        printf("br:%lx, ", item.br_pc);
-      }
-      printf("\n");
     }
     else{
       tage_histories_.push_into_history(br_pc, br_target, br_type,
@@ -891,7 +872,7 @@ class Tage {
 
   Random_Number_Generator& random_number_gen_;
   public: 
-  std::deque<Past_branch_entry<TAGE_CONFIG>> past_branches_queue;
+  std::deque<Past_branch_entry> past_branches_queue;
 };
 
 template <class TAGE_CONFIG>

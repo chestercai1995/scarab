@@ -551,6 +551,8 @@ static inline Icache_State icache_issue_ops(Break_Reason* break_fetch,
     ic->sd.op_count++;
     INC_STAT_EVENT(ic->proc_id, INST_LOST_FETCH + ic->off_path, 1);
 
+    printf("cf_type is  %u for op_num %llu\n", op->table_info->cf_type, op->op_num);
+
     DEBUG(ic->proc_id,
           "Fetching op from Icache addr: %s off: %d inst_info: %p ii_addr: %s "
           "dis: %s opnum: (%s:%s)\n",
@@ -558,12 +560,15 @@ static inline Icache_State icache_issue_ops(Break_Reason* break_fetch,
           hexstr64s(op->inst_info->addr), disasm_op(op, TRUE),
           unsstr64(op->op_num), unsstr64(op->unique_num));
 
+    printf("HERE!\n");
+
     /* figure out next address after current instruction */
     if(op->table_info->cf_type) {
       // For pipeline gating
       if(op->table_info->cf_type == CF_CBR)
         td->td_info.fetch_br_count++;
 
+      printf("inside icache cf_type if  %llu\n", op->op_num);
       if(*break_fetch == BREAK_BARRIER) {
         // for fetch barriers (including syscalls), we do not want to do
         // redirect/recovery, BUT we still want to update the branch predictor.
