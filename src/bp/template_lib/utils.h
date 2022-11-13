@@ -51,7 +51,6 @@ struct conditional_type<false, T, F> {
 
 struct Future_tage_pred{
   uint64_t pc;
-  uint64_t target;
   bool pred;
 };
 

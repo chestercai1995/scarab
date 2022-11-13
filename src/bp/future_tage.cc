@@ -102,18 +102,40 @@ void bp_future_tage_timestamp(Op* op) {
 
 uns8 bp_future_tage_pred(Op* op) {
   uns proc_id = op->proc_id;
-  future_tages.at(proc_id)->get_prediction(
+  auto&       l0_btb      = l0_across_all_cores.at(op->proc_id);
+
+  Future_tage_pred future_tage_res = future_tages.at(proc_id)->get_future_pred(
     op->recovery_info.branch_id, op->inst_info->addr);
   
   if(cycle_count > last_flush_cycle + LATE_BP_LATENCY + 1){
     //TODO: ADD THIS TO TABLE
+    //TODO: NEW knob for future tage latency
+    if(future_tage_res.pred){
+      Cache_access_result<l0_btb_entry> car_res = l0_btb.probe(op->proc_id, future_tage_res.pc);
+      if(!car_res.hit){
+        l0_btb_entry new_entry = {future_tage_res.pc, op->oracle_info.target, 2};
+        l0_btb.insert(proc_id, future_tage_res.pc, false, new_entry);
+      }
+    }
+    else{
+      Cache_access_result<l0_btb_entry> car_res = l0_btb.probe(op->proc_id, future_tage_res.pc);
+      if(car_res.hit){
+        l0_btb.invalidate(proc_id, future_tage_res.pc);
+      }
+    }
   }
 
   Addr        pc          = op->inst_info->addr;
-  auto&       l0_btb      = l0_across_all_cores.at(op->proc_id);
   Cache_access_result<l0_btb_entry> res = l0_btb.probe(op->proc_id, pc);
   Flag hit = res.hit;
   Flag counter_taken = res.data.counter>1;
+
+  if(hit){
+    printf("hit in l0 for br %llx\n", pc);
+  }
+  else{
+    printf("miss in l0 for br %llx\n", pc);
+  }
   
   DEBUG(op->proc_id, "Predicting for op_num:%s addr:%s, p_dir:%d, t_dir:%d\n",
         unsstr64(op->op_num), hexstr64s(pc), pred, op->oracle_info.dir);
@@ -141,38 +163,38 @@ void bp_future_tage_update(Op* op) {
     return;
   }
 
-  auto&       l0_btb       = l0_across_all_cores.at(proc_id);
-  const Addr  pc           = op->inst_info->addr;
+  //auto&       l0_btb       = l0_across_all_cores.at(proc_id);
+  //const Addr  pc           = op->inst_info->addr;
 
 
-  if(op->oracle_info.dir) {
-    auto access_res = l0_btb.access(proc_id, pc);
-    if(!access_res.hit){
-        l0_btb_entry new_entry = {pc, op->oracle_info.target, 2};
-        auto insert_res = l0_btb.insert(proc_id, pc, /*is_prefetch =*/ FALSE, new_entry);
-        if(!insert_res.hit){
-          printf("nothing replaced\n");
-        }
-        DEBUG(proc_id, "write l0btb op %llu, pc=x%llx, repl: %d, replpc = %llx\n", op->op_num, pc, insert_res.hit, insert_res.line_addr);
-    }
-    else 
-    {
-      int counter_val = access_res.data.counter;
-      if(counter_val<3) counter_val++;
-      l0_btb.data[access_res.cache_addr.set][access_res.cache_addr.way].counter = counter_val;
-    }
-    DEBUG(proc_id, "Drop l0btb for l0btb hit op %llu\n", op->op_num);
-  } 
-  else{
-    //DEBUG(proc_id, "Drop l0btb for NT op %llu\n", op->op_num);
-    auto access_res = l0_btb.probe(proc_id, pc);
-    if(access_res.hit)
-    {
-      int counter_val = access_res.data.counter;
-      if(counter_val>0) counter_val--;
-      l0_btb.data[access_res.cache_addr.set][access_res.cache_addr.way].counter = counter_val;
-    }
-  }
+  //if(op->oracle_info.dir) {
+  //  auto access_res = l0_btb.access(proc_id, pc);
+  //  if(!access_res.hit){
+  //      l0_btb_entry new_entry = {pc, op->oracle_info.target, 2};
+  //      auto insert_res = l0_btb.insert(proc_id, pc, /*is_prefetch =*/ FALSE, new_entry);
+  //      if(!insert_res.hit){
+  //        printf("nothing replaced\n");
+  //      }
+  //      DEBUG(proc_id, "write l0btb op %llu, pc=x%llx, repl: %d, replpc = %llx\n", op->op_num, pc, insert_res.hit, insert_res.line_addr);
+  //  }
+  //  else 
+  //  {
+  //    int counter_val = access_res.data.counter;
+  //    if(counter_val<3) counter_val++;
+  //    l0_btb.data[access_res.cache_addr.set][access_res.cache_addr.way].counter = counter_val;
+  //  }
+  //  DEBUG(proc_id, "Drop l0btb for l0btb hit op %llu\n", op->op_num);
+  //} 
+  //else{
+  //  //DEBUG(proc_id, "Drop l0btb for NT op %llu\n", op->op_num);
+  //  auto access_res = l0_btb.probe(proc_id, pc);
+  //  if(access_res.hit)
+  //  {
+  //    int counter_val = access_res.data.counter;
+  //    if(counter_val>0) counter_val--;
+  //    l0_btb.data[access_res.cache_addr.set][access_res.cache_addr.way].counter = counter_val;
+  //  }
+  //}
 }
 
 void bp_future_tage_retire(Op* op) {

@@ -123,13 +123,6 @@ struct TAGE_SC_L_CONFIG_64KB {
   };
 };
 
-constexpr int TAGE_SC_L_CONFIG_64KB::SC::GLOBAL_HISTORY_GEHL_HISTORIES::arr[];
-constexpr int TAGE_SC_L_CONFIG_64KB::SC::PATH_GEHL_HISTORIES::arr[];
-constexpr int TAGE_SC_L_CONFIG_64KB::SC::FIRST_LOCAL_GEHL_HISTORIES::arr[];
-constexpr int TAGE_SC_L_CONFIG_64KB::SC::SECOND_LOCAL_GEHL_HISTORIES::arr[];
-constexpr int TAGE_SC_L_CONFIG_64KB::SC::THIRD_LOCAL_GEHL_HISTORIES::arr[];
-constexpr int TAGE_SC_L_CONFIG_64KB::SC::FIRST_IMLI_GEHL_HISTORIES::arr[];
-constexpr int TAGE_SC_L_CONFIG_64KB::SC::SECOND_IMLI_GEHL_HISTORIES::arr[];
 
 /****************************************************************************************/
 struct TAGE_SC_L_CONFIG_80KB {
@@ -233,14 +226,6 @@ struct TAGE_SC_L_CONFIG_80KB {
     static constexpr int SC_PATH_HISTORY_WIDTH = 27;
   };
 };
-
-constexpr int TAGE_SC_L_CONFIG_80KB::SC::GLOBAL_HISTORY_GEHL_HISTORIES::arr[];
-constexpr int TAGE_SC_L_CONFIG_80KB::SC::PATH_GEHL_HISTORIES::arr[];
-constexpr int TAGE_SC_L_CONFIG_80KB::SC::FIRST_LOCAL_GEHL_HISTORIES::arr[];
-constexpr int TAGE_SC_L_CONFIG_80KB::SC::SECOND_LOCAL_GEHL_HISTORIES::arr[];
-constexpr int TAGE_SC_L_CONFIG_80KB::SC::THIRD_LOCAL_GEHL_HISTORIES::arr[];
-constexpr int TAGE_SC_L_CONFIG_80KB::SC::FIRST_IMLI_GEHL_HISTORIES::arr[];
-constexpr int TAGE_SC_L_CONFIG_80KB::SC::SECOND_IMLI_GEHL_HISTORIES::arr[];
 
 /****************************************************************************************/
 
@@ -347,11 +332,3 @@ struct TAGE_SC_L_CONFIG_FUTURE {
     static constexpr int SC_PATH_HISTORY_WIDTH = 27;
   };
 };
-
-constexpr int TAGE_SC_L_CONFIG_FUTURE::SC::GLOBAL_HISTORY_GEHL_HISTORIES::arr[];
-constexpr int TAGE_SC_L_CONFIG_FUTURE::SC::PATH_GEHL_HISTORIES::arr[];
-constexpr int TAGE_SC_L_CONFIG_FUTURE::SC::FIRST_LOCAL_GEHL_HISTORIES::arr[];
-constexpr int TAGE_SC_L_CONFIG_FUTURE::SC::SECOND_LOCAL_GEHL_HISTORIES::arr[];
-constexpr int TAGE_SC_L_CONFIG_FUTURE::SC::THIRD_LOCAL_GEHL_HISTORIES::arr[];
-constexpr int TAGE_SC_L_CONFIG_FUTURE::SC::FIRST_IMLI_GEHL_HISTORIES::arr[];
-constexpr int TAGE_SC_L_CONFIG_FUTURE::SC::SECOND_IMLI_GEHL_HISTORIES::arr[];

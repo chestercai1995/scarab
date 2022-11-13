@@ -233,6 +233,10 @@ struct Tage_Prediction_Info {
   int64_t global_history_head_checkpoint_;
   int64_t path_history_checkpoint;
   std::deque<Past_branch_entry<TAGE_CONFIG>> old_branch_checkpoint; 
+  uint64_t pred_pc;
+  bool used_bimodal;
+  bool used_tagged;
+  bool used_alt;
 };
 
 template <class TAGE_CONFIG>
@@ -357,6 +361,10 @@ class Tage {
     prediction_info->low_confidence    = !prediction_info->high_confidence;
     prediction_info->prediction        = prediction_info->alt_prediction;
     prediction_info->longest_match_prediction = prediction_info->alt_prediction;
+    prediction_info->pred_pc = br_pc;
+    prediction_info->used_bimodal = true;
+    prediction_info->used_alt = false;
+    prediction_info->used_tagged = false;
 
     // Find matching tagged tables and update prediction and alternate
     // prediction
@@ -391,8 +399,14 @@ class Tage {
       bool use_alt = alt_selector_table_[alt_selector_table_index].get() >= 0;
       if((!use_alt) || std::abs(2 * longest_match_counter + 1) > 1) {
         prediction_info->prediction = prediction_info->longest_match_prediction;
+        prediction_info->used_bimodal = false;
+        prediction_info->used_alt = false;
+        prediction_info->used_tagged = true;
       } else {
         prediction_info->prediction = prediction_info->alt_prediction;
+        prediction_info->used_bimodal = false;
+        prediction_info->used_alt = true;
+        prediction_info->used_tagged = false;
       }
 
       // REVISIT: this seems buggy, only works for COUNTER_BITS = 3
@@ -432,11 +446,14 @@ class Tage {
     prediction_info->low_confidence    = !prediction_info->high_confidence;
     prediction_info->prediction        = prediction_info->alt_prediction;
     prediction_info->longest_match_prediction = prediction_info->alt_prediction;
+    prediction_info->pred_pc = br_pc;
+    prediction_info->used_bimodal = true;
+    prediction_info->used_alt = false;
+    prediction_info->used_tagged = false;
 
     int   bimodal_index = (br_pc ^ (br_pc >> 2)) &
               ((1 << TAGE_CONFIG::BIMODAL_LOG_TABLES_SIZE) - 1);
-    result.pc = bimodal_table_[bimodal_index].pc;
-    result.target = bimodal_table_[bimodal_index].target;
+    result.pc = bimodal_table_[bimodal_index].future_pc;
     result.pred = bimodal_output.prediction;
 
     // Find matching tagged tables and update prediction and alternate
@@ -473,17 +490,19 @@ class Tage {
       if((!use_alt) || std::abs(2 * longest_match_counter + 1) > 1) {
         prediction_info->prediction = prediction_info->longest_match_prediction;
         result.pc = tagged_table_ptrs_[prediction_info->hit_bank]
-                      [indices[prediction_info->hit_bank]].pc;
-        result.target = tagged_table_ptrs_[prediction_info->hit_bank]
-                      [indices[prediction_info->hit_bank]].target;
+                      [indices[prediction_info->hit_bank]].future_pc;
         result.pred = prediction_info->prediction;
+        prediction_info->used_bimodal = false;
+        prediction_info->used_alt = false;
+        prediction_info->used_tagged = true;
       } else {
         prediction_info->prediction = prediction_info->alt_prediction;
         result.pc = tagged_table_ptrs_[prediction_info->alt_bank]
-                      [indices[prediction_info->alt_bank]].pc;
-        result.target = tagged_table_ptrs_[prediction_info->alt_bank]
-                      [indices[prediction_info->alt_bank]].target;
+                      [indices[prediction_info->alt_bank]].future_pc;
         result.pred = prediction_info->prediction;
+        prediction_info->used_bimodal = false;
+        prediction_info->used_alt = true;
+        prediction_info->used_tagged = false;
       }
 
       // REVISIT: this seems buggy, only works for COUNTER_BITS = 3
@@ -495,6 +514,15 @@ class Tage {
       prediction_info->low_confidence    = std::abs(2 * longest_match_counter +
                                                  1) == 1;
     }
+    printf("\nPredicting br %lx, using br_pc %lx, predicted pc is %lx, Q has ", cur_br_pc, br_pc, result.pc);
+    for(auto item:past_branches_queue){
+      printf("br:%lx, ", item.br_pc);
+    }
+    printf("\n history is: ");
+    for(int i = 0; i < 50; i++){
+      printf("%d", tage_histories_.history_register_[i]);
+    }
+    printf("\n");
     return result;
   }
 
@@ -542,10 +570,30 @@ class Tage {
                     bool                                     final_prediction) {
     const int* indices = prediction_info.indices;
     const int* tags    = prediction_info.tags;
-
-    bool allocate_new_entry =
-      (prediction_info.prediction != resolve_dir) &&
-      (prediction_info.hit_bank <
+    bool pred_wrong = prediction_info.prediction != resolve_dir;
+    bool longgest_wrong = false;
+    if(TAGE_CONFIG::USE_STALE_HIST_PC){
+      if(prediction_info.used_bimodal) {
+        int   bimodal_index = (br_pc ^ (br_pc >> 2)) &
+                  ((1 << TAGE_CONFIG::BIMODAL_LOG_TABLES_SIZE) - 1);
+        if(br_pc != bimodal_table_[bimodal_index].future_pc){
+          pred_wrong = true;
+        }
+      } else if (prediction_info.used_tagged) {
+        if(br_pc != tagged_table_ptrs_[prediction_info.hit_bank][indices[prediction_info.hit_bank]].future_pc){
+          pred_wrong = true;
+          longgest_wrong = true;
+        }
+      } else if (prediction_info.used_alt) {
+        if(br_pc != tagged_table_ptrs_[prediction_info.alt_bank][indices[prediction_info.alt_bank]].future_pc){
+          pred_wrong = true;
+        }
+      }
+      else {
+        assert(false);
+      }
+    }
+    bool allocate_new_entry = pred_wrong && (prediction_info.hit_bank <
        Tage_Histories<TAGE_CONFIG>::twice_num_histories_);
 
     if(prediction_info.hit_bank > 0) {
@@ -562,7 +610,7 @@ class Tage {
         tagged_table_ptrs_[prediction_info.hit_bank]
                           [indices[prediction_info.hit_bank]];
       if(std::abs(2 * matched_entry.pred_counter.get() + 1) <= 1) {
-        if(prediction_info.longest_match_prediction == resolve_dir) {
+        if(prediction_info.longest_match_prediction == resolve_dir && !longgest_wrong) {
           // If it was delivering the correct prediction, no need to
           // allocate a
           // new entry even if the overall prediction was false.
@@ -584,7 +632,7 @@ class Tage {
       }
     }
 
-    if(final_prediction == resolve_dir) {
+    if(final_prediction == resolve_dir && !pred_wrong) {
       if((random_number_gen_() & 31) != 0) {
         allocate_new_entry = false;
       }
@@ -613,6 +661,7 @@ class Tage {
           if(bank_entry.useful.get() == 0) {
             if(std::abs(2 * bank_entry.pred_counter.get() + 1) <= 3) {
               bank_entry.tag = tags[i];
+              bank_entry.future_pc = br_pc;
               bank_entry.pred_counter.set(resolve_dir ? 0 : -1);
               num_allocated += 1;
               if(num_extra_entries_to_allocate <= 0) {
@@ -644,6 +693,7 @@ class Tage {
             if(bank_entry.useful.get() == 0) {
               if(std::abs(2 * bank_entry.pred_counter.get() + 1) <= 3) {
                 bank_entry.tag = tags[i];
+                bank_entry.future_pc = br_pc;
                 bank_entry.pred_counter.set(resolve_dir ? 0 : -1);
                 num_allocated += 1;
                 if(num_extra_entries_to_allocate <= 0) {
@@ -692,7 +742,7 @@ class Tage {
                                 [indices[prediction_info.alt_bank]];
             alt_matched_entry.pred_counter.update(resolve_dir);
           } else {
-            update_bimodal(br_pc, resolve_dir);
+            update_bimodal(prediction_info.pred_pc, resolve_dir);
           }
         }
       }
@@ -714,7 +764,7 @@ class Tage {
         }
       }
     } else {
-      update_bimodal(br_pc, resolve_dir);
+      update_bimodal(prediction_info.pred_pc, resolve_dir);
     }
 
     if(prediction_info.longest_match_prediction !=
@@ -769,8 +819,8 @@ class Tage {
     int8_t prediction = 0;
 
     //chester future tage
-    uint64_t pc = 0;
-    uint64_t target = 0;
+    uint64_t future_pc = 0;
+    Saturating_Counter<TAGE_CONFIG::USEFUL_BITS, false>       useful;
   };
 
   struct Tagged_Entry {
@@ -779,10 +829,9 @@ class Tage {
     int                                                       tag = 0;
 
     //chester future tage
-    uint64_t pc;
-    uint64_t target;
+    uint64_t future_pc;
 
-    Tagged_Entry() : pred_counter(0), useful(0), pc(0), target(0){}
+    Tagged_Entry() : pred_counter(0), useful(0), future_pc(0){}
   };
 
   void initialize_tag_bits(void);
@@ -797,6 +846,8 @@ class Tage {
   Bimodal_Output get_bimodal_prediction_confidence(uint64_t br_pc) const;
 
   void update_bimodal(uint64_t br_pc, bool resolve_dir);
+
+  void update_bimodal_future(uint64_t br_pc, uint64_t future_pc, bool resolve_dir);
 
   // Get the banks IDs of matching tables with longest histories.
   // A bank of 0 means a match was not found.
@@ -1007,6 +1058,33 @@ void Tage<TAGE_CONFIG>::update_bimodal(uint64_t br_pc, bool resolve_dir) {
   bimodal_table_[index].prediction = bimodal_output >> 1;
   bimodal_table_[index >> TAGE_CONFIG::BIMODAL_HYSTERESIS_SHIFT].hysteresis =
     (bimodal_output & 1);
+}
+
+template <class TAGE_CONFIG>
+void Tage<TAGE_CONFIG>::update_bimodal_future(uint64_t br_pc, uint64_t future_pc, bool resolve_dir) {
+  assert(TAGE_CONFIG::USE_STALE_HIST_PC);
+  int index = (br_pc ^ (br_pc >> 2)) &
+              ((1 << TAGE_CONFIG::BIMODAL_LOG_TABLES_SIZE) - 1);
+  int8_t bimodal_output =
+    (bimodal_table_[index].prediction << 1) +
+    (bimodal_table_[index >> TAGE_CONFIG::BIMODAL_HYSTERESIS_SHIFT].hysteresis);
+  if(resolve_dir && bimodal_output < 3) {
+    bimodal_output += 1;
+  } else if(!resolve_dir && bimodal_output > 0) {
+    bimodal_output -= 1;
+  }
+  bimodal_table_[index].prediction = bimodal_output >> 1;
+  bimodal_table_[index >> TAGE_CONFIG::BIMODAL_HYSTERESIS_SHIFT].hysteresis =
+    (bimodal_output & 1);
+  if(bimodal_table_[index].future_pc != future_pc){
+    if(bimodal_table_[index].useful.get() == 0){
+      bimodal_table_[index].future_pc = future_pc;
+      bimodal_table_[index].useful.set(1);
+    }
+    else{
+      bimodal_table_[index].useful.set(0);
+    }
+  }
 }
 
 template <class TAGE_CONFIG>
