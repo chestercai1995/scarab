@@ -514,7 +514,7 @@ class Tage {
       prediction_info->low_confidence    = std::abs(2 * longest_match_counter +
                                                  1) == 1;
     }
-    printf("\nPredicting br %lx, using br_pc %lx, predicted pc is %lx, Q has ", cur_br_pc, br_pc, result.pc);
+    printf("\nPredicting br %lx, using br_pc %lx, predicted pc is %lx, Q has size %lu", cur_br_pc, br_pc, result.pc, past_branches_queue.size());
     for(auto item:past_branches_queue){
       printf("br:%lx, ", item.br_pc);
     }
@@ -529,18 +529,17 @@ class Tage {
   void update_speculative_state(
     uint64_t br_pc, uint64_t br_target, Branch_Type br_type,
     bool final_prediction, Tage_Prediction_Info<TAGE_CONFIG>* prediction_info) {
-    //printf("PRE BRANCH at PC %lx, count %ld\n", br_pc, count);
-    //printf("History is: ");
-    //for(int i = 0; i<100; i++){
-    //  printf("%d", tage_histories_.history_register_[i]);
-    //}
-    //printf("\n");
-    //printf("Q contains :");
-    //for(auto item:past_branches_queue){
-    //  printf("br:%lx, ", item.br_pc);
-    //}
-    //printf("\n");
-    //count++;
+    printf("PRE BRANCH at PC %lx\n", br_pc);
+    printf("History is: ");
+    for(int i = 0; i<100; i++){
+      printf("%d", tage_histories_.history_register_[i]);
+    }
+    printf("\n");
+    printf("Q contains :");
+    for(auto item:past_branches_queue){
+      printf("br:%lx, ", item.br_pc);
+    }
+    printf("\n");
     for(auto item:past_branches_queue){
       prediction_info->old_branch_checkpoint.push_back(item);
     }
@@ -558,6 +557,11 @@ class Tage {
         past_branches_queue.pop_front();
       }
       past_branches_queue.push_back(temp);
+      printf("pushed an entry %lx in to past branch Q, size %lu\n", temp.br_pc, past_branches_queue.size());
+      for(auto item:past_branches_queue){
+        printf("br:%lx, ", item.br_pc);
+      }
+      printf("\n");
     }
     else{
       tage_histories_.push_into_history(br_pc, br_target, br_type,
@@ -803,6 +807,11 @@ class Tage {
     tage_histories_.path_history_ = prediction_info.path_history_checkpoint;
 
     past_branches_queue = prediction_info.old_branch_checkpoint;
+    printf("after tage recovery, Q has size %lu ", past_branches_queue.size());
+    for(auto item:past_branches_queue){
+      printf("br:%lx, ", item.br_pc);
+    }
+    printf("\n");
   }
 
   void local_recover_speculative_state(

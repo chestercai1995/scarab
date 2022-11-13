@@ -107,9 +107,7 @@ uns8 bp_future_tage_pred(Op* op) {
   Future_tage_pred future_tage_res = future_tages.at(proc_id)->get_future_pred(
     op->recovery_info.branch_id, op->inst_info->addr);
   
-  if(cycle_count > last_flush_cycle + LATE_BP_LATENCY + 1){
-    //TODO: ADD THIS TO TABLE
-    //TODO: NEW knob for future tage latency
+  if(cycle_count > last_flush_cycle + FUTURE_TAGE_LATENCY + 1){
     if(future_tage_res.pred){
       Cache_access_result<l0_btb_entry> car_res = l0_btb.probe(op->proc_id, future_tage_res.pc);
       if(!car_res.hit){
@@ -138,7 +136,7 @@ uns8 bp_future_tage_pred(Op* op) {
   }
   
   DEBUG(op->proc_id, "Predicting for op_num:%s addr:%s, p_dir:%d, t_dir:%d\n",
-        unsstr64(op->op_num), hexstr64s(pc), pred, op->oracle_info.dir);
+        unsstr64(op->op_num), hexstr64s(pc), hit, op->oracle_info.dir);
   if(USE_2_BIT_COUNTER_IN_L0) return hit && counter_taken; 
   else return hit;
 }

@@ -814,6 +814,7 @@ void node_retire() {
       }
       bp_retire_op(g_bp_data, op);
     }
+    printf("RETIRE opnum %llu\n", op->op_num);
 
     if(op->table_info->mem_type == MEM_LD &&
        (op->done_cycle - op->sched_cycle) < 5) {

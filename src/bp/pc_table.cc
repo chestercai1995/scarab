@@ -75,7 +75,7 @@ uns8 bp_pc_table_pred(Op* op) {
   Flag counter_taken = res.data.counter>1;
   
   DEBUG(op->proc_id, "Predicting for op_num:%s addr:%s, p_dir:%d, t_dir:%d\n",
-        unsstr64(op->op_num), hexstr64s(pc), pred, op->oracle_info.dir);
+        unsstr64(op->op_num), hexstr64s(pc), hit, op->oracle_info.dir);
   if(USE_2_BIT_COUNTER_IN_L0) return hit && counter_taken; 
   else return hit;
 }
