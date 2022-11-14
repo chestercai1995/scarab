@@ -174,10 +174,8 @@ void repl_class::access(Cache_address pos){
 
 void repl_class::invalidate(Cache_address pos){
     ASSERT(0, repl_data[pos.set][pos.way].valid);
-    repl_data[pos.way][pos.set].valid = false;
-    repl_data[pos.way][pos.set].access_cycle = MAX_CTR;
-    repl_data[pos.way][pos.set].insert_cycle = MAX_CTR;
-    if(repl_policy == SRRIP_REPL){
-        repl_data[pos.set][pos.way].rrpv = max_rrpv;
-    }
+    repl_data[pos.set][pos.way].valid = false;
+    repl_data[pos.set][pos.way].access_cycle = MAX_CTR;
+    repl_data[pos.set][pos.way].insert_cycle = MAX_CTR;
+    repl_data[pos.set][pos.way].rrpv = max_rrpv;
 }
