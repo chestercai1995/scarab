@@ -565,10 +565,11 @@ class Tage {
     const int* tags    = prediction_info.tags;
     bool pred_wrong = prediction_info.prediction != resolve_dir;
     bool longgest_wrong = false;
+    bool alt_wrong = false;
     //printf("commit state for %lx, bimodal %d, tagged %d, alt %d, pred_wrong %d\n", br_pc,prediction_info.used_bimodal, prediction_info.used_tagged, prediction_info.used_alt, pred_wrong);
     if(TAGE_CONFIG::USE_STALE_HIST_PC){
       if(prediction_info.used_bimodal) {
-        int   bimodal_index = (br_pc ^ (br_pc >> 2)) &
+        int   bimodal_index = (prediction_info.pred_pc ^ (prediction_info.pred_pc >> 2)) &
                   ((1 << TAGE_CONFIG::BIMODAL_LOG_TABLES_SIZE) - 1);
         //printf("bimodal pc is %lx\n", bimodal_table_[bimodal_index].future_pc);
         if(br_pc != bimodal_table_[bimodal_index].future_pc){
@@ -578,7 +579,6 @@ class Tage {
         //printf("bimodal pc is %lx\n", tagged_table_ptrs_[prediction_info.hit_bank][indices[prediction_info.hit_bank]].future_pc);
         if(br_pc != tagged_table_ptrs_[prediction_info.hit_bank][indices[prediction_info.hit_bank]].future_pc){
           pred_wrong = true;
-          longgest_wrong = true;
         }
       } else if (prediction_info.used_alt) {
         //printf("bimodal pc is %lx\n", tagged_table_ptrs_[prediction_info.alt_bank][indices[prediction_info.alt_bank]].future_pc);
@@ -588,6 +588,16 @@ class Tage {
       }
       else {
         assert(false);
+      }
+      if(prediction_info.hit_bank != 0){
+        if(br_pc != tagged_table_ptrs_[prediction_info.hit_bank][indices[prediction_info.hit_bank]].future_pc){
+          longgest_wrong = true;
+        }
+      }
+      if(prediction_info.alt_bank != 0){
+        if(br_pc != tagged_table_ptrs_[prediction_info.alt_bank][indices[prediction_info.alt_bank]].future_pc){
+          alt_wrong = true;
+        }
       }
       //printf("pred_wrong %d", pred_wrong);
       //printf("final_pred %d, prediction_info pred %d, resolve_dir %d\n", final_prediction, prediction_info.prediction, resolve_dir);
@@ -626,7 +636,7 @@ class Tage {
             ((1 << TAGE_CONFIG::ALT_SELECTOR_LOG_TABLE_SIZE) - 1);
 
           alt_selector_table_[alt_selector_table_index].update(
-            prediction_info.alt_prediction == resolve_dir);
+            prediction_info.alt_prediction == resolve_dir && !pred_wrong);
         }
       }
     }
@@ -735,7 +745,7 @@ class Tage {
                           [indices[prediction_info.hit_bank]];
       if(std::abs(2 * matched_entry.pred_counter.get() + 1) == 1) {
         if(prediction_info.longest_match_prediction !=
-           resolve_dir) {  // acts as a protection
+           resolve_dir || longgest_wrong) {  // acts as a protection
           if(prediction_info.alt_bank > 0) {
             Tagged_Entry& alt_matched_entry =
               tagged_table_ptrs_[prediction_info.alt_bank]
@@ -756,7 +766,7 @@ class Tage {
       if(std::abs(2 * matched_entry.pred_counter.get() + 1) == 1) {
         matched_entry.useful.set(0);
       }
-      if(prediction_info.alt_prediction == resolve_dir &&
+      if(prediction_info.alt_prediction == resolve_dir  && !alt_wrong &&
          prediction_info.alt_bank > 0) {
         Tagged_Entry& alt_matched_entry =
           tagged_table_ptrs_[prediction_info.alt_bank]
