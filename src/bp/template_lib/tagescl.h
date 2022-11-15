@@ -202,8 +202,15 @@ Future_tage_pred Tage_SC_L<CONFIG>::get_future_pred(int64_t branch_id, uint64_t 
 template <class CONFIG>
 void Tage_SC_L<CONFIG>::commit_state(int64_t branch_id, uint64_t br_pc,
                                      Branch_Type br_type, bool resolve_dir) {
-  if(!br_type.is_conditional) {
-    return;
+  if(CONFIG::TAGE::USE_STALE_HIST_PC){
+    if(br_type.is_indirect) {
+      return;
+    }
+  }
+  else {
+    if(!br_type.is_conditional) {
+      return;
+    }
   }
   auto& prediction_info = prediction_info_buffer_[branch_id];
   if(CONFIG::USE_SC) {

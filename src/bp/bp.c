@@ -640,8 +640,14 @@ void bp_resolve_op(Bp_Data* bp_data, Op* op) {
   if(!UPDATE_BP_OFF_PATH && op->off_path) {
     return;
   }
+  Flag skip = FALSE;
+  if(SKIP_L0_ON_LATE_MISPRED && op->oracle_info.late_pred){
+    skip = TRUE;  
+  }
 
-  bp_data->bp->update_func(op);
+  if(!skip){
+    bp_data->bp->update_func(op);
+  }
   if(USE_LATE_BP) {
     bp_data->late_bp->update_func(op);
   }

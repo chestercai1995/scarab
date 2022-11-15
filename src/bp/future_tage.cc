@@ -110,7 +110,7 @@ uns8 bp_future_tage_pred(Op* op) {
   
   DEBUG(op->proc_id, "future tage on op %llu, pc is %lx, pred is %d\n", op->op_num, future_tage_res.pc, future_tage_res.pred);
   
-  if(cycle_count > last_flush_cycle + FUTURE_TAGE_LATENCY + 1){
+  if((cycle_count > last_flush_cycle + FUTURE_TAGE_LATENCY + 1) || (!REALISTIC_FLUSH_PENALTY)){
     if(future_tage_res.pred){
       Cache_access_result<l0_btb_entry> car_res = l0_btb.probe(op->proc_id, future_tage_res.pc);
       if(!car_res.hit){
@@ -155,6 +155,41 @@ void bp_future_tage_update(Op* op) {
   if(cf_type != CF_CBR && cf_type != CF_BR && cf_type != CF_CALL) {
     //only deal with direct branches, maybe can remove call later as well
     return;
+  }
+
+  auto&       l0_btb       = l0_across_all_cores.at(proc_id);
+  const Addr  pc           = op->inst_info->addr;
+
+
+  if(INSERT_FUTURE_TAGE_ON_TAKEN){
+    if(op->oracle_info.dir) {
+      auto access_res = l0_btb.access(proc_id, pc);
+      if(!access_res.hit){
+          l0_btb_entry new_entry = {pc, op->oracle_info.target, 2};
+          auto insert_res = l0_btb.insert(proc_id, pc, /*is_prefetch =*/ FALSE, new_entry);
+          if(!insert_res.hit){
+            printf("nothing replaced\n");
+          }
+          DEBUG(proc_id, "write l0btb op %llu, pc=x%llx, repl: %d, replpc = %llx\n", op->op_num, pc, insert_res.hit, insert_res.line_addr);
+      }
+      else 
+      {
+        int counter_val = access_res.data.counter;
+        if(counter_val<3) counter_val++;
+        l0_btb.data[access_res.cache_addr.set][access_res.cache_addr.way].counter = counter_val;
+      }
+      DEBUG(proc_id, "Drop l0btb for l0btb hit op %llu\n", op->op_num);
+    } 
+    else{
+      //DEBUG(proc_id, "Drop l0btb for NT op %llu\n", op->op_num);
+      auto access_res = l0_btb.probe(proc_id, pc);
+      if(access_res.hit)
+      {
+        int counter_val = access_res.data.counter;
+        if(counter_val>0) counter_val--;
+        l0_btb.data[access_res.cache_addr.set][access_res.cache_addr.way].counter = counter_val;
+      }
+    }
   }
 }
 
