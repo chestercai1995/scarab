@@ -86,7 +86,7 @@ void bp_future_tage_init() {
     future_tages.reserve(NUM_CORES);
     for(uns i = 0; i < NUM_CORES; ++i) {
       future_tages.push_back(
-        std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_FUTURE>>(NODE_TABLE_SIZE));
+        std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_FUTURE_64KB>>(NODE_TABLE_SIZE));
       l0_across_all_cores.push_back(Cache_cpp<l0_btb_entry>("l0_btb", L0_BTB_SIZE, L0_BTB_ASSOC, 1, SRRIP_REPL));
     }
   }
