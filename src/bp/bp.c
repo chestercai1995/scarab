@@ -178,9 +178,7 @@ void bp_sched_recovery(Bp_Recovery_Info* bp_recovery_info, Op* op,
     } else {
       bp_recovery_info->late_bp_recovery_wrong = FALSE;
     }
-<<<<<<< HEAD
     bp_recovery_info->recovery_info.late_bp_recovery  = late_bp_recovery;
-=======
     DEBUG(
       bp_recovery_info->proc_id,
       "Recovery signaled for op_num:%s @ 0x%s  next_fetch:0x%s offpath:%d\n",
@@ -193,7 +191,6 @@ void bp_sched_recovery(Bp_Recovery_Info* bp_recovery_info, Op* op,
           "because of existing recovery for opnum %llu on cycle %llu\n",
           op->op_num, bp_recovery_info->recovery_op_num,
           bp_recovery_info->recovery_cycle);
->>>>>>> new_fetch_nt_btb_miss
   }
 }
 
@@ -559,7 +556,7 @@ Addr bp_predict_op(Bp_Data* bp_data, Op* op, uns br_num, Addr fetch_addr) {
                              fetch_prediction != op->oracle_info.npc;
 
   op->oracle_info.l0_mispred = (op->oracle_info.pred != op->oracle_info.dir) &&
-                            (prediction != op->oracle_info.npc);
+                               (bp_prediction != op->oracle_info.npc);
   op->oracle_info.l1_mispred = FALSE;
   if(USE_LATE_BP) {
     const Addr late_prediction = op->oracle_info.late_pred ? pred_target :
