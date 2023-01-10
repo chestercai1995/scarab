@@ -177,17 +177,17 @@ void cmp_istreams(void) {
 
       set_bp_recovery_info(&cmp_model.bp_recovery_info[proc_id]);
 
+      if(cycle_count >= bp_recovery_info->recovery_cycle) {
+        set_bp_data(&cmp_model.bp_data[proc_id]);
+        cmp_set_all_stages(proc_id);
+        cmp_recover();
+      }
       if(cycle_count >= bp_recovery_info->redirect_cycle) {
         set_icache_stage(&cmp_model.icache_stage[proc_id]);
         ASSERT(proc_id, proc_id == bp_recovery_info->redirect_op->proc_id);
         ASSERT_PROC_ID_IN_ADDR(
           proc_id, bp_recovery_info->redirect_op->oracle_info.pred_npc);
         cmp_redirect();
-      }
-      if(cycle_count >= bp_recovery_info->recovery_cycle) {
-        set_bp_data(&cmp_model.bp_data[proc_id]);
-        cmp_set_all_stages(proc_id);
-        cmp_recover();
       }
     }
   }

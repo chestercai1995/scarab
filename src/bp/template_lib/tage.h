@@ -28,6 +28,7 @@
 
 #include "utils.h"
 
+template <class TAGE_CONFIG>
 class Past_branch_entry;
 /* The main history register suitable for very large history. The history is
  * implemented as a circular buffer for efficiency. The API only allows
@@ -231,19 +232,32 @@ struct Tage_Prediction_Info {
   int     num_global_history_bits;
   int64_t global_history_head_checkpoint_;
   int64_t path_history_checkpoint;
-  std::deque<Past_branch_entry> old_branch_checkpoint; 
+  std::deque<Past_branch_entry<TAGE_CONFIG>> old_branch_checkpoint; 
   uint64_t pred_pc;
   bool used_bimodal;
   bool used_tagged;
   bool used_alt;
 };
 
+template <class TAGE_CONFIG>
 struct Past_branch_entry {
   public:
   uint64_t br_pc;
   uint64_t br_target;
   Branch_Type br_type;
   bool branch_dir;
+
+  int hit_bank;
+  int alt_bank;
+  int indices[2 * TAGE_CONFIG::NUM_HISTORIES + 1];
+  int tags[2 * TAGE_CONFIG::NUM_HISTORIES + 1];
+  bool longest_match_prediction;
+  bool alt_prediction;
+  bool alt_confidence;
+  uint64_t pred_pc;
+  bool used_bimodal;
+  bool used_tagged;
+  bool used_alt;
 
   Past_branch_entry(){
     br_pc = 0;
@@ -266,9 +280,6 @@ class Tage_Histories {
   void push_into_history(uint64_t br_pc, uint64_t br_target,
                          Branch_Type br_type, bool branch_dir,
                          Tage_Prediction_Info<TAGE_CONFIG>* prediction_info) {
-    //printf("\n");
-    //printf("pc: %lx, target: %lx, is_cond:%d, is_ind:%d, br_dir:%d", br_pc, br_target, br_type.is_conditional, br_type.is_indirect, branch_dir);
-    //printf("\n\n");
     head_old_           = history_register_.head_idx();
     int num_bit_inserts = 2;
     if(br_type.is_indirect && !br_type.is_conditional) {
@@ -465,6 +476,7 @@ class Tage {
               ((1 << TAGE_CONFIG::BIMODAL_LOG_TABLES_SIZE) - 1);
     result.pc = bimodal_table_[bimodal_index].future_pc;
     result.pred = bimodal_output.prediction;
+    //printf("bimodal prediction from index %d\n", bimodal_index);
 
     // Find matching tagged tables and update prediction and alternate
     // prediction
@@ -505,6 +517,7 @@ class Tage {
         prediction_info->used_bimodal = false;
         prediction_info->used_alt = false;
         prediction_info->used_tagged = true;
+        //printf("used tagged pred from bank %d, index %d\n", prediction_info->hit_bank, indices[prediction_info->hit_bank]);
       } else {
         prediction_info->prediction = prediction_info->alt_prediction;
         if(prediction_info->alt_bank != 0){
@@ -516,6 +529,7 @@ class Tage {
           prediction_info->used_bimodal = false;
           prediction_info->used_alt = true;
           prediction_info->used_tagged = false;
+          //printf("used alt pred from bank %d, index %d\n", prediction_info->alt_bank, indices[prediction_info->alt_bank]);
         }
       }
 
@@ -539,13 +553,13 @@ class Tage {
       prediction_info->old_branch_checkpoint.push_back(item);
     }
     if(TAGE_CONFIG::USE_STALE_HIST_PC){
-      Past_branch_entry temp;
+      Past_branch_entry<TAGE_CONFIG> temp;
       temp.br_pc = br_pc;
       temp.br_target = br_target;
       temp.br_type = br_type;
       temp.branch_dir = final_prediction;
       if(past_branches_queue.size() == STALE_HISTORY_DISTANCE){
-        Past_branch_entry oldest = past_branches_queue.front();
+        Past_branch_entry<TAGE_CONFIG> oldest = past_branches_queue.front();
         tage_histories_.push_into_history(oldest.br_pc, oldest.br_target, oldest.br_type,
                                           oldest.branch_dir, prediction_info);
         past_branches_queue.pop_front();
@@ -571,17 +585,14 @@ class Tage {
       if(prediction_info.used_bimodal) {
         int   bimodal_index = (prediction_info.pred_pc ^ (prediction_info.pred_pc >> 2)) &
                   ((1 << TAGE_CONFIG::BIMODAL_LOG_TABLES_SIZE) - 1);
-        //printf("bimodal pc is %lx\n", bimodal_table_[bimodal_index].future_pc);
         if(br_pc != bimodal_table_[bimodal_index].future_pc){
           pred_wrong = true;
         }
       } else if (prediction_info.used_tagged) {
-        //printf("bimodal pc is %lx\n", tagged_table_ptrs_[prediction_info.hit_bank][indices[prediction_info.hit_bank]].future_pc);
         if(br_pc != tagged_table_ptrs_[prediction_info.hit_bank][indices[prediction_info.hit_bank]].future_pc){
           pred_wrong = true;
         }
       } else if (prediction_info.used_alt) {
-        //printf("bimodal pc is %lx\n", tagged_table_ptrs_[prediction_info.alt_bank][indices[prediction_info.alt_bank]].future_pc);
         if(br_pc != tagged_table_ptrs_[prediction_info.alt_bank][indices[prediction_info.alt_bank]].future_pc){
           pred_wrong = true;
         }
@@ -599,7 +610,7 @@ class Tage {
           alt_wrong = true;
         }
       }
-      //printf("pred_wrong %d", pred_wrong);
+      //printf("pred_wrong %d ", pred_wrong);
       //printf("final_pred %d, prediction_info pred %d, resolve_dir %d\n", final_prediction, prediction_info.prediction, resolve_dir);
     }
     bool allocate_new_entry = pred_wrong && (prediction_info.hit_bank <
@@ -674,6 +685,7 @@ class Tage {
               bank_entry.future_pc = br_pc;
               bank_entry.pred_counter.set(resolve_dir ? 0 : -1);
               num_allocated += 1;
+              //printf("allocating on bank %d, index %d\n", i, indices[i]);
               if(num_extra_entries_to_allocate <= 0) {
                 break;
               }
@@ -706,6 +718,7 @@ class Tage {
                 bank_entry.future_pc = br_pc;
                 bank_entry.pred_counter.set(resolve_dir ? 0 : -1);
                 num_allocated += 1;
+                //printf("allocating on bank %d, index %d\n", i, indices[i]);
                 if(num_extra_entries_to_allocate <= 0) {
                   break;
                 }
@@ -751,6 +764,7 @@ class Tage {
               tagged_table_ptrs_[prediction_info.alt_bank]
                                 [indices[prediction_info.alt_bank]];
             alt_matched_entry.pred_counter.update(resolve_dir);
+            //printf("updating bank %d index %d, pred_count %d, pc %lx\n", prediction_info.alt_bank, indices[prediction_info.alt_bank], alt_matched_entry.pred_counter.get(), alt_matched_entry.future_pc);
           } else {
             if(TAGE_CONFIG::USE_STALE_HIST_PC){
               update_bimodal_future(prediction_info.pred_pc, br_pc, resolve_dir);
@@ -762,6 +776,8 @@ class Tage {
       }
 
       matched_entry.pred_counter.update(resolve_dir);
+      //printf("updating bank %d index %d, pred_count %d, pc %lx\n", prediction_info.hit_bank, 
+      //  indices[prediction_info.hit_bank], matched_entry.pred_counter.get(), matched_entry.future_pc);
       // sign changes: no way it can have been useful
       if(std::abs(2 * matched_entry.pred_counter.get() + 1) == 1) {
         matched_entry.useful.set(0);
@@ -821,11 +837,6 @@ class Tage {
     tage_histories_.path_history_ = prediction_info.path_history_checkpoint;
 
     past_branches_queue = prediction_info.old_branch_checkpoint;
-    //for(auto item:past_branches_queue){
-    //  printf("br:%lx, ", item.br_pc);
-    //}
-    //printf("\n");
-    //fflush(stdout);
   }
 
   void local_recover_speculative_state(
@@ -905,7 +916,7 @@ class Tage {
 
   Random_Number_Generator& random_number_gen_;
   public: 
-  std::deque<Past_branch_entry> past_branches_queue;
+  std::deque<Past_branch_entry<TAGE_CONFIG>> past_branches_queue;
 };
 
 template <class TAGE_CONFIG>
@@ -1103,6 +1114,7 @@ void Tage<TAGE_CONFIG>::update_bimodal_future(uint64_t br_pc, uint64_t future_pc
     if(bimodal_table_[index].useful.get() == 0){
       bimodal_table_[index].future_pc = future_pc;
       bimodal_table_[index].useful.set(1);
+      //printf("allocating new bimodal entry at index %d\n", index);
     }
     else{
       bimodal_table_[index].useful.set(0);

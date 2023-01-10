@@ -111,6 +111,10 @@ struct Op_Info_struct {
                        // predictor
   Flag late_misfetch;  // true if target address is the ONLY thing that was
                        // wrong after the multi-cycle branch prediction kicks in
+  Flag l0_mispred;
+  Flag l1_mispred;
+  Flag l2_mispred;
+
   Flag  late_mispred;  // true if the multi-cycle branch predictor mispredicted
   Flag  recovery_sch;  // true if this op has scheduled a recovery
   uns32 pred_global_hist;  // global history used to predict the branch

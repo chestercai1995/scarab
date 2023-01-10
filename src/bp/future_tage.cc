@@ -111,6 +111,7 @@ uns8 bp_future_tage_pred(Op* op) {
   DEBUG(op->proc_id, "future tage on op %llu, pc is %lx, pred is %d\n", op->op_num, future_tage_res.pc, future_tage_res.pred);
   
   if((cycle_count > last_flush_cycle + FUTURE_TAGE_LATENCY + 1) || (!REALISTIC_FLUSH_PENALTY)){
+    DEBUG(op->proc_id, "updating l0 btb\n");
     if(future_tage_res.pred){
       Cache_access_result<l0_btb_entry> car_res = l0_btb.probe(op->proc_id, future_tage_res.pc);
       if(!car_res.hit){
@@ -139,6 +140,7 @@ uns8 bp_future_tage_pred(Op* op) {
 
 void bp_future_tage_spec_update(Op* op) {
   uns proc_id = op->proc_id;
+  
   future_tages.at(proc_id)->update_speculative_state(
     op->recovery_info.branch_id, op->inst_info->addr,
     get_branch_type(proc_id, op->table_info->cf_type), op->oracle_info.pred,
@@ -207,5 +209,14 @@ void bp_future_tage_recover(Recovery_Info* recovery_info) {
     recovery_info->branch_id, recovery_info->PC,
     get_branch_type(proc_id, recovery_info->cf_type), recovery_info->new_dir,
     recovery_info->branchTarget);
-  last_flush_cycle = cycle_count;
+  if(SET_FLUSH_CYCLE_ON_TAGE){
+    if(recovery_info->late_bp_recovery){
+      last_flush_cycle = cycle_count;
+    }
+  }
+  if(SET_FLUSH_CYCLE_ON_EXEC){
+    if(!recovery_info->late_bp_recovery){
+      last_flush_cycle = cycle_count;
+    }
+  }
 }

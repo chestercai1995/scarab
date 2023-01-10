@@ -165,6 +165,7 @@ void bp_sched_recovery(Bp_Recovery_Info* bp_recovery_info, Op* op,
     } else {
       bp_recovery_info->late_bp_recovery_wrong = FALSE;
     }
+    bp_recovery_info->recovery_info.late_bp_recovery  = late_bp_recovery;
   }
 }
 
@@ -501,7 +502,9 @@ Addr bp_predict_op(Bp_Data* bp_data, Op* op, uns br_num, Addr fetch_addr) {
                             (prediction != op->oracle_info.npc);
   op->oracle_info.misfetch = !op->oracle_info.mispred &&
                              prediction != op->oracle_info.npc;
-
+  op->oracle_info.l0_mispred = (op->oracle_info.pred != op->oracle_info.dir) &&
+                            (prediction != op->oracle_info.npc);
+  op->oracle_info.l1_mispred = FALSE;
   if(USE_LATE_BP) {
     const Addr late_prediction = op->oracle_info.late_pred ? pred_target :
                                                              pc_plus_offset;
@@ -511,6 +514,7 @@ Addr bp_predict_op(Bp_Data* bp_data, Op* op, uns br_num, Addr fetch_addr) {
                                    (late_prediction != op->oracle_info.npc);
     op->oracle_info.late_misfetch = !op->oracle_info.late_mispred &&
                                     late_prediction != op->oracle_info.npc;
+    op->oracle_info.l1_mispred = op->oracle_info.late_mispred;
   }
 
   op->bp_cycle = cycle_count;
