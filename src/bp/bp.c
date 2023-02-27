@@ -45,6 +45,7 @@
 #include "bp/tagescl.h"
 #include "bp/pc_table.h"
 #include "bp/future_tage.h"
+#include "bp/real_future_tage.h"
 #include "libs/cache_lib.h"
 #include "model.h"
 #include "thread.h"
@@ -357,6 +358,7 @@ Addr bp_predict_op(Bp_Data* bp_data, Op* op, uns br_num, Addr fetch_addr) {
     ASSERT_PROC_ID_IN_ADDR(op->proc_id, op->oracle_info.npc);
     op->oracle_info.pred_npc      = op->oracle_info.npc;
     op->oracle_info.late_pred_npc = op->oracle_info.npc;
+    bp_data->bp->pred_func(op);
     bp_data->bp->spec_update_func(op);
     if(USE_LATE_BP) {
       bp_data->late_bp->spec_update_func(op);
@@ -394,7 +396,7 @@ Addr bp_predict_op(Bp_Data* bp_data, Op* op, uns br_num, Addr fetch_addr) {
     case CF_BR:
       op->oracle_info.pred      = TAKEN;
       op->oracle_info.late_pred = TAKEN;
-      if(BP_MECH == PC_TABLE_BP || BP_MECH == FUTURE_TAGE_BP){
+      if(BP_MECH == PC_TABLE_BP || BP_MECH == FUTURE_TAGE_BP || BP_MECH == REAL_FUTURE_TAGE_BP){
         op->oracle_info.pred    = bp_data->bp->pred_func(op);
       }
       if(!op->off_path)
@@ -434,7 +436,7 @@ Addr bp_predict_op(Bp_Data* bp_data, Op* op, uns br_num, Addr fetch_addr) {
     case CF_CALL:
       op->oracle_info.pred      = TAKEN;
       op->oracle_info.late_pred = TAKEN;
-      if(BP_MECH == PC_TABLE_BP || BP_MECH == FUTURE_TAGE_BP){
+      if(BP_MECH == PC_TABLE_BP || BP_MECH == FUTURE_TAGE_BP || BP_MECH == REAL_FUTURE_TAGE_BP){
         op->oracle_info.pred    = bp_data->bp->pred_func(op);
       }
       if(ENABLE_CRS)
@@ -448,6 +450,9 @@ Addr bp_predict_op(Bp_Data* bp_data, Op* op, uns br_num, Addr fetch_addr) {
     case CF_IBR:
       op->oracle_info.pred      = TAKEN;
       op->oracle_info.late_pred = TAKEN;
+      if(BP_MECH == REAL_FUTURE_TAGE_BP){
+        bp_data->bp->pred_func(op);
+      }
       if(ENABLE_IBP) {
         Addr ibp_target = bp_data->bp_ibtb->pred_func(bp_data, op);
         if(ibp_target) {
@@ -471,6 +476,9 @@ Addr bp_predict_op(Bp_Data* bp_data, Op* op, uns br_num, Addr fetch_addr) {
     case CF_ICALL:
       op->oracle_info.pred      = TAKEN;
       op->oracle_info.late_pred = TAKEN;
+      if(BP_MECH == REAL_FUTURE_TAGE_BP){
+        bp_data->bp->pred_func(op);
+      }
       if(ENABLE_IBP) {
         Addr ibp_target = bp_data->bp_ibtb->pred_func(bp_data, op);
         if(ibp_target) {
@@ -497,6 +505,9 @@ Addr bp_predict_op(Bp_Data* bp_data, Op* op, uns br_num, Addr fetch_addr) {
     case CF_ICO:
       op->oracle_info.pred      = TAKEN;
       op->oracle_info.late_pred = TAKEN;
+      if(BP_MECH == REAL_FUTURE_TAGE_BP){
+        bp_data->bp->pred_func(op);
+      }
       if(ENABLE_CRS) {
         pred_target = CRS_REALISTIC ? bp_crs_realistic_pop(bp_data, op) :
                                       bp_crs_pop(bp_data, op);
@@ -511,6 +522,9 @@ Addr bp_predict_op(Bp_Data* bp_data, Op* op, uns br_num, Addr fetch_addr) {
     case CF_RET:
       op->oracle_info.pred      = TAKEN;
       op->oracle_info.late_pred = TAKEN;
+      if(BP_MECH == REAL_FUTURE_TAGE_BP){
+        bp_data->bp->pred_func(op);
+      }
       if(ENABLE_CRS)
         pred_target = CRS_REALISTIC ? bp_crs_realistic_pop(bp_data, op) :
                                       bp_crs_pop(bp_data, op);

@@ -91,7 +91,8 @@ class PBSJobDefaults:
   """
   pbs_args="-V"
   #queue=None
-  queue="clx"
+  #queue="clx"
+  queue="xeon"
   processor_cores_per_node=10
   memory_per_core=None
 

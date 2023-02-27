@@ -119,6 +119,11 @@ typedef struct Recovery_Info_struct {  // QUESTION no proc_id?
   Addr    branchTarget;
   int64   branch_id;  // set by the branch predictor timestamp_func().
   Flag    late_bp_recovery;  // set by the branch predictor timestamp_func().
+  
+
+  int64   future_tage_branch_id;  // set by the branch predictor timestamp_func().
+  int64   future_tage_update_id;  // set by the branch predictor timestamp_func().
+  Flag    future_tage_update_id_valid;  // set by the branch predictor timestamp_func().
 } Recovery_Info;
 // }}}
 

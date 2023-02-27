@@ -36,6 +36,7 @@ Bp bp_table [] = {
     { TAGESCL80_BP, "tagescl80",  bp_tagescl_init,    bp_tagescl_timestamp,   bp_tagescl_pred,  bp_tagescl_spec_update,   bp_tagescl_update,   bp_tagescl_retire,   bp_tagescl_recover  },    
     { PC_TABLE_BP,  "pc_table",  bp_pc_table_init,    bp_pc_table_timestamp,   bp_pc_table_pred,  bp_pc_table_spec_update,   bp_pc_table_update,   bp_pc_table_retire,   bp_pc_table_recover  },    
     { FUTURE_TAGE_BP,"future_tage",  bp_future_tage_init,   bp_future_tage_timestamp,   bp_future_tage_pred,  bp_future_tage_spec_update,   bp_future_tage_update,   bp_future_tage_retire,   bp_future_tage_recover  },    
+    { REAL_FUTURE_TAGE_BP,"real_future_tage",  bp_real_future_tage_init,   bp_real_future_tage_timestamp,   bp_real_future_tage_pred,  bp_real_future_tage_spec_update,   bp_real_future_tage_update,   bp_real_future_tage_retire,   bp_real_future_tage_recover  },    
 #define DEF_CBP(CBP_NAME, CBP_CLASS) \
     { CBP_CLASS ## _BP,    CBP_NAME,   SCARAB_BP_INTF_FUNC(CBP_CLASS, init), SCARAB_BP_INTF_FUNC(CBP_CLASS, timestamp), SCARAB_BP_INTF_FUNC(CBP_CLASS, pred), SCARAB_BP_INTF_FUNC(CBP_CLASS, spec_update), SCARAB_BP_INTF_FUNC(CBP_CLASS, update), SCARAB_BP_INTF_FUNC(CBP_CLASS, retire), SCARAB_BP_INTF_FUNC(CBP_CLASS, recover)}, 
 #include "cbp_table.def"

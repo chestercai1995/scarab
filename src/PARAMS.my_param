@@ -41,6 +41,9 @@
 --update_bp_off_path            1                         # Allow off path ops to update branch predictor state (e.g., ops when they complete exec stage).
 --bp_mech                       tagescl                   
 --late_bp_latency               3 
+--fetch_nt_after_btb_miss       1
+
+--l0_btb_size                   32
 
 
 #### BTB

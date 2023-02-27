@@ -169,6 +169,14 @@ class Circular_Buffer {
   }
 
   int64_t back_id() const { return back_; }
+  int64_t get_size() const { return size_; }
+  int64_t get_N_before_back(int64_t N) const { 
+    if(size_ < N){
+      return (int64_t)-1;
+    }
+    assert(back_ >= (N - 1));
+    return back_ - (N - 1);
+  }
 
   void deallocate_after(int64_t dealloc_id) {
     assert(dealloc_id >= front_);

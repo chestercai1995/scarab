@@ -429,7 +429,7 @@ class Tage {
 
   Future_tage_pred get_future_prediction(
     uint64_t cur_br_pc, Tage_Prediction_Info<TAGE_CONFIG>* prediction_info) const {
-    assert(TAGE_CONFIG::USE_STALE_HIST_PC);
+    assert(TAGE_CONFIG::USE_STALE_HIST_PC || TAGE_CONFIG::USE_REAL_STALE_HIST_PC);
     Future_tage_pred result;
     uint64_t br_pc = cur_br_pc;
     if(TAGE_CONFIG::USE_STALE_HIST_PC){
@@ -581,7 +581,7 @@ class Tage {
     bool longgest_wrong = false;
     bool alt_wrong = false;
     //printf("commit state for %lx, bimodal %d, tagged %d, alt %d, pred_wrong %d\n", br_pc,prediction_info.used_bimodal, prediction_info.used_tagged, prediction_info.used_alt, pred_wrong);
-    if(TAGE_CONFIG::USE_STALE_HIST_PC){
+    if(TAGE_CONFIG::USE_STALE_HIST_PC || TAGE_CONFIG::USE_REAL_STALE_HIST_PC){
       if(prediction_info.used_bimodal) {
         int   bimodal_index = (prediction_info.pred_pc ^ (prediction_info.pred_pc >> 2)) &
                   ((1 << TAGE_CONFIG::BIMODAL_LOG_TABLES_SIZE) - 1);

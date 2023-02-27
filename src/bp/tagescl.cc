@@ -88,7 +88,7 @@ void bp_tagescl_init() {
 void bp_tagescl_timestamp(Op* op) {
   uns proc_id = op->proc_id;
   op->recovery_info.branch_id =
-    tagescl_predictors.at(proc_id)->get_new_branch_id();
+    tagescl_predictors.at(proc_id)->get_new_branch_id(op->off_path);
 }
 
 uns8 bp_tagescl_pred(Op* op) {
@@ -109,7 +109,7 @@ void bp_tagescl_update(Op* op) {
   uns proc_id = op->proc_id;
   tagescl_predictors.at(proc_id)->commit_state(
     op->recovery_info.branch_id, op->inst_info->addr,
-    get_branch_type(proc_id, op->table_info->cf_type), op->oracle_info.dir);
+    get_branch_type(proc_id, op->table_info->cf_type), op->oracle_info.dir, op->off_path);
 }
 
 void bp_tagescl_retire(Op* op) {

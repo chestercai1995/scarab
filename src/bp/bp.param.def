@@ -71,6 +71,7 @@ DEF_PARAM(  insert_future_tage_on_taken, INSERT_FUTURE_TAGE_ON_TAKEN, Flag    , 
 DEF_PARAM(  set_flush_cycle_on_tage   , SET_FLUSH_CYCLE_ON_TAGE   , Flag    , Flag       , TRUE       ,        )
 DEF_PARAM(  set_flush_cycle_on_exec   , SET_FLUSH_CYCLE_ON_EXEC   , Flag    , Flag       , TRUE       ,        )
 DEF_PARAM(  skip_l0_on_late_mispred   , SKIP_L0_ON_LATE_MISPRED   , Flag    , Flag       , FALSE      ,        )
+DEF_PARAM(  future_tage_oracle_ordering, FUTURE_TAGE_ORACLE_ORDERING, Flag    , Flag       , FALSE      ,        )
 DEF_PARAM(  hist_length               , HIST_LENGTH               , uns     , uns        , 16         ,        )
 DEF_PARAM(  pht_ctr_bits              , PHT_CTR_BITS              , uns     , uns        , 2          , const  ) /* const */
 DEF_PARAM(  bht_entries               , BHT_ENTRIES               , uns     , uns        , (4 * 1024) ,        )

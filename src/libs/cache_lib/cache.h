@@ -30,6 +30,7 @@
 #include "libs/list_lib.h"
 #include "libs/cache_lib/repl.h"
 #include "globals/utils.h"
+#include "globals/assert.h"
 #include <vector>
 #include <string>
 
@@ -50,6 +51,7 @@ template <typename T>
 class Cache_access_result {
   public:
   Flag hit;
+  Flag pf;
   Addr access_addr;
   Addr line_addr;
   T data;
@@ -124,6 +126,7 @@ class Cache_cpp {
         }
         this->num_demand_access++;
         ret.hit = true;
+        ret.pf = false;
         ret.access_addr = addr;
         ret.line_addr = cache_line_addr(addr);
         ret.data = data[cache_addr.set][cache_addr.way];
@@ -138,6 +141,7 @@ class Cache_cpp {
       Cache_access_result<T> ret;
       if(cache_addr.valid) {
         ret.hit = true;
+        ret.pf = entries[cache_addr.set][cache_addr.way].pref;
         ret.access_addr = addr;
         ret.line_addr = cache_line_addr(addr);
         ret.data = data[cache_addr.set][cache_addr.way];
@@ -183,12 +187,14 @@ class Cache_cpp {
 
       Cache_access_result<T> ret;
       ret.hit = entries[new_line_addr.set][new_line_addr.way].valid;
+      ret.pf = entries[new_line_addr.set][new_line_addr.way].pref;
       ret.line_addr = entries[new_line_addr.set][new_line_addr.way].tag;
       ret.access_addr = addr;
       ret.data = data[new_line_addr.set][new_line_addr.way];
       ret.cache_addr = new_line_addr;
 
       entries[new_line_addr.set][new_line_addr.way].valid = true;
+      entries[new_line_addr.set][new_line_addr.way].pref = is_prefetch;
       entries[new_line_addr.set][new_line_addr.way].tag = tag;
       entries[new_line_addr.set][new_line_addr.way].proc_id = proc_id;
       entries[new_line_addr.set][new_line_addr.way].base = line_addr;
@@ -208,6 +214,7 @@ class Cache_cpp {
         entries[pos.set][pos.way].base= FALSE;  
         repl.invalidate(pos);
         ret.hit = true;
+        ret.pf = entries[pos.set][pos.way].pref;
         ret.access_addr = addr;
         ret.line_addr = cache_line_addr(addr);
         ret.data = data[pos.set][pos.way];
@@ -229,6 +236,12 @@ class Cache_cpp {
       
       Cache_address new_line_index = repl.get_next_repl(repl_set);
       return data[new_line_index.set][new_line_index.way];
+    }
+
+    void update(Cache_access_result<T> updated_entry){
+      ASSERT(0, updated_entry.hit);
+      ASSERT(0, entries[updated_entry.cache_addr.set][updated_entry.cache_addr.way].valid);
+      data[updated_entry.cache_addr.set][updated_entry.cache_addr.way] = updated_entry.data;
     }
 }; //class
 

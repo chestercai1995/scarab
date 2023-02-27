@@ -43,11 +43,6 @@ struct l0_btb_entry {
 
 std::vector<Cache_cpp<l0_btb_entry>> l0_btbs_across_all_cores;
 
-//uns32 get_pht_index(const Addr addr, const uns32 hist) {
-//  const uns32 cooked_hist = hist >> (32 - HIST_LENGTH);
-//  const uns32 cooked_addr = (addr >> 2) & N_BIT_MASK(HIST_LENGTH);
-//  return cooked_hist ^ cooked_addr;
-//}
 }  // namespace
 
 // The only speculative state of gshare is the global history which is managed
@@ -96,11 +91,12 @@ void bp_pc_table_update(Op* op) {
     auto access_res = l0_btb.access(proc_id, pc);
     if(!access_res.hit){
         l0_btb_entry new_entry = {pc, op->oracle_info.target, 2};
+        #if ENABLE_GLOBAL_DEBUG_PRINT
         auto insert_res = l0_btb.insert(proc_id, pc, /*is_prefetch =*/ FALSE, new_entry);
-        if(!insert_res.hit){
-          printf("nothing replaced\n");
-        }
         DEBUG(proc_id, "write l0btb op %llu, pc=x%llx, repl: %d, replpc = %llx\n", op->op_num, pc, insert_res.hit, insert_res.line_addr);
+        #else
+        l0_btb.insert(proc_id, pc, /*is_prefetch =*/ FALSE, new_entry);
+        #endif
     }
     else 
     {

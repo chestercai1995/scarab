@@ -32,21 +32,26 @@ struct Tage_SC_L_Prediction_Info {
   SC_Prediction_Info                          sc;
   bool                                        final_prediction;
   uint64_t                                    br_pc;
+  bool                                        off_path;
 };
 
 class Tage_SC_L_Base {
  public:
-  virtual int64_t get_new_branch_id()                                 = 0;
+  virtual int64_t get_new_branch_id(bool off_path)                    = 0;
+  virtual int64_t get_old_branch_id(int64_t N)                        = 0;
   virtual bool    get_prediction(int64_t branch_id, uint64_t br_pc)   = 0;
   virtual Future_tage_pred    get_future_pred(int64_t branch_id, uint64_t br_pc)   = 0;
   virtual void    update_speculative_state(int64_t branch_id, uint64_t br_pc,
                                            Branch_Type br_type, bool branch_dir,
                                            uint64_t br_target)        = 0;
   virtual void    commit_state(int64_t branch_id, uint64_t br_pc,
-                               Branch_Type br_type, bool resolve_dir) = 0;
+                               Branch_Type br_type, bool resolve_dir, bool off_path) = 0;
   virtual void    commit_state_at_retire(int64_t branch_id, uint64_t br_pc,
                                          Branch_Type br_type, bool resolve_dir,
                                          uint64_t br_target)          = 0;
+  virtual void    commit_state_at_retire_real_stale(int64_t branch_id, uint64_t br_pc,
+                                         Branch_Type br_type, bool resolve_dir,
+                                         uint64_t br_target, int64_t update_id)   = 0;
   virtual void flush_branch_and_repair_state(int64_t branch_id, uint64_t br_pc,
                                              Branch_Type br_type,
                                              bool        resolve_dir,
@@ -76,12 +81,18 @@ class Tage_SC_L : public Tage_SC_L_Base {
   // the branch is retired or flushed. The class internally maintains metadata
   // for each in-flight branch. The rest of the public functions in this class
   // need the id of a branch to work on.
-  int64_t get_new_branch_id() override {
+  int64_t get_new_branch_id(bool off_path) override {
     int64_t branch_id       = prediction_info_buffer_.allocate_back();
     auto&   prediction_info = prediction_info_buffer_[branch_id];
     Tage<typename CONFIG::TAGE>::build_empty_prediction(&prediction_info.tage);
     Loop_Predictor<typename CONFIG::LOOP>::build_empty_prediction(
       &prediction_info.loop);
+    prediction_info.off_path = off_path;
+    return branch_id;
+  }
+
+  int64_t get_old_branch_id(int64_t N) override {
+    int64_t branch_id       = prediction_info_buffer_.get_N_before_back(N);
     return branch_id;
   }
 
@@ -107,7 +118,7 @@ class Tage_SC_L : public Tage_SC_L_Base {
   // cannot
   // be undone.
   void commit_state(int64_t branch_id, uint64_t br_pc, Branch_Type br_type,
-                    bool resolve_dir) override;
+                    bool resolve_dir, bool off_path) override;
 
   // Updates predictor states that are critical for algorithm correctness.
   // Thus, should always be called in the retire state and after
@@ -117,6 +128,9 @@ class Tage_SC_L : public Tage_SC_L_Base {
                               Branch_Type br_type, bool resolve_dir,
                               uint64_t br_target) override;
 
+  void commit_state_at_retire_real_stale(int64_t branch_id, uint64_t br_pc,
+                                         Branch_Type br_type, bool resolve_dir,
+                                         uint64_t br_target, int64_t update_id) override;
   // Flushes the branch and all branches that came after it and repairs the
   // speculative state of the predictor. It invalidated all branch_id of
   // flushed
@@ -201,8 +215,8 @@ Future_tage_pred Tage_SC_L<CONFIG>::get_future_pred(int64_t branch_id, uint64_t 
 
 template <class CONFIG>
 void Tage_SC_L<CONFIG>::commit_state(int64_t branch_id, uint64_t br_pc,
-                                     Branch_Type br_type, bool resolve_dir) {
-  if(CONFIG::TAGE::USE_STALE_HIST_PC){
+                                     Branch_Type br_type, bool resolve_dir, bool off_path) {
+  if(CONFIG::TAGE::USE_STALE_HIST_PC || CONFIG::TAGE::USE_REAL_STALE_HIST_PC){
     if(br_type.is_indirect) {
       return;
     }
@@ -213,6 +227,9 @@ void Tage_SC_L<CONFIG>::commit_state(int64_t branch_id, uint64_t br_pc,
     }
   }
   auto& prediction_info = prediction_info_buffer_[branch_id];
+  if(CONFIG::TAGE::USE_REAL_STALE_HIST_PC){
+    assert(off_path || !prediction_info.off_path);
+  }
   if(CONFIG::USE_SC) {
     statistical_corrector_.commit_state(
       br_pc, resolve_dir, prediction_info.tage, prediction_info.sc,
@@ -302,6 +319,30 @@ void Tage_SC_L<CONFIG>::commit_state_at_retire(int64_t     branch_id,
     statistical_corrector_.commit_state_at_retire();
   }
   prediction_info_buffer_.deallocate_front(branch_id);
+}
+
+template <class CONFIG>
+void Tage_SC_L<CONFIG>::commit_state_at_retire_real_stale(int64_t     branch_id,
+                                               uint64_t    br_pc,
+                                               Branch_Type br_type,
+                                               bool        resolve_dir,
+                                               uint64_t    br_target,
+                                               int64_t     update_id) {
+  assert(CONFIG::TAGE::USE_REAL_STALE_HIST_PC);
+  auto& prediction_info = prediction_info_buffer_[branch_id];
+  // if (CONFIG::USE_LOOP_PREDICTOR) {
+  //  loop_predictor_.commit_state_at_retire(
+  //      br_pc, resolve_dir, prediction_info.loop,
+  //      prediction_info.final_prediction != resolve_dir,
+  //      prediction_info.tage.prediction);
+  //}
+  tage_.commit_state_at_retire(prediction_info.tage);
+  if(CONFIG::USE_SC) {
+    statistical_corrector_.commit_state_at_retire();
+  }
+  if(update_id != -1){
+    prediction_info_buffer_.deallocate_front(update_id);
+  }
 }
 
 template <class CONFIG>

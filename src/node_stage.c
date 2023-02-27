@@ -792,6 +792,9 @@ void node_retire() {
       } else if(retire_op) {
         frontend_retire(op->proc_id, op->inst_uid);
       }
+      //if(inst_count[node->proc_id] % 10000 == 0){
+      //  per_interval_print();
+      //}
     }
     uop_count[node->proc_id]++;
     STAT_EVENT(op->proc_id, NODE_UOP_COUNT);
