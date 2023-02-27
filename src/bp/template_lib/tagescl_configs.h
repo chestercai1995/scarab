@@ -549,8 +549,10 @@ struct TAGE_SC_L_CONFIG_60KB {
 /****************************************************************************************/
 struct TAGE_SC_L_CONFIG_FUTURE_56KB {
   // static constexpr bool PIPELINE_SUPPORT = true;
-  static constexpr bool USE_LOOP_PREDICTOR       = true;
-  static constexpr bool USE_SC                   = true;
+  //static constexpr bool USE_LOOP_PREDICTOR       = true;
+  //static constexpr bool USE_SC                   = true;
+  static constexpr bool USE_LOOP_PREDICTOR       = false;
+  static constexpr bool USE_SC                   = false;
   static constexpr int  CONFIDENCE_COUNTER_WIDTH = 7;
 
   struct TAGE {
@@ -654,8 +656,10 @@ struct TAGE_SC_L_CONFIG_FUTURE_56KB {
 /****************************************************************************************/
 struct TAGE_SC_L_CONFIG_FUTURE_48KB {
   // static constexpr bool PIPELINE_SUPPORT = true;
-  static constexpr bool USE_LOOP_PREDICTOR       = true;
-  static constexpr bool USE_SC                   = true;
+  static constexpr bool USE_LOOP_PREDICTOR       = false;
+  static constexpr bool USE_SC                   = false;
+  //static constexpr bool USE_LOOP_PREDICTOR       = true;
+  //static constexpr bool USE_SC                   = true;
   static constexpr int  CONFIDENCE_COUNTER_WIDTH = 7;
 
   struct TAGE {
@@ -760,8 +764,10 @@ struct TAGE_SC_L_CONFIG_FUTURE_48KB {
 /****************************************************************************************/
 struct TAGE_SC_L_CONFIG_FUTURE_40KB {
   // static constexpr bool PIPELINE_SUPPORT = true;
-  static constexpr bool USE_LOOP_PREDICTOR       = true;
-  static constexpr bool USE_SC                   = true;
+  //static constexpr bool USE_LOOP_PREDICTOR       = true;
+  //static constexpr bool USE_SC                   = true;
+  static constexpr bool USE_LOOP_PREDICTOR       = false;
+  static constexpr bool USE_SC                   = false;
   static constexpr int  CONFIDENCE_COUNTER_WIDTH = 7;
 
   struct TAGE {
@@ -866,8 +872,10 @@ struct TAGE_SC_L_CONFIG_FUTURE_40KB {
 /****************************************************************************************/
 struct TAGE_SC_L_CONFIG_FUTURE_32KB {
   // static constexpr bool PIPELINE_SUPPORT = true;
-  static constexpr bool USE_LOOP_PREDICTOR       = true;
-  static constexpr bool USE_SC                   = true;
+  //static constexpr bool USE_LOOP_PREDICTOR       = true;
+  //static constexpr bool USE_SC                   = true;
+  static constexpr bool USE_LOOP_PREDICTOR       = false;
+  static constexpr bool USE_SC                   = false;
   static constexpr int  CONFIDENCE_COUNTER_WIDTH = 7;
 
   struct TAGE {
@@ -972,8 +980,10 @@ struct TAGE_SC_L_CONFIG_FUTURE_32KB {
 /****************************************************************************************/
 struct TAGE_SC_L_CONFIG_FUTURE_16KB {
   // static constexpr bool PIPELINE_SUPPORT = true;
-  static constexpr bool USE_LOOP_PREDICTOR       = true;
-  static constexpr bool USE_SC                   = true;
+  //static constexpr bool USE_LOOP_PREDICTOR       = true;
+  //static constexpr bool USE_SC                   = true;
+  static constexpr bool USE_LOOP_PREDICTOR       = false;
+  static constexpr bool USE_SC                   = false;
   static constexpr int  CONFIDENCE_COUNTER_WIDTH = 7;
 
   struct TAGE {
@@ -1078,8 +1088,10 @@ struct TAGE_SC_L_CONFIG_FUTURE_16KB {
 /****************************************************************************************/
 struct TAGE_SC_L_CONFIG_FUTURE_8KB {
   // static constexpr bool PIPELINE_SUPPORT = true;
-  static constexpr bool USE_LOOP_PREDICTOR       = true;
-  static constexpr bool USE_SC                   = true;
+  //static constexpr bool USE_LOOP_PREDICTOR       = true;
+  //static constexpr bool USE_SC                   = true;
+  static constexpr bool USE_LOOP_PREDICTOR       = false;
+  static constexpr bool USE_SC                   = false;
   static constexpr int  CONFIDENCE_COUNTER_WIDTH = 7;
 
   struct TAGE {
@@ -2414,8 +2426,10 @@ struct TAGE_SC_L_CONFIG_80KB_V5 {
 
 struct TAGE_SC_L_CONFIG_FUTURE_96KB_V1 {
   // static constexpr bool PIPELINE_SUPPORT = true;
-  static constexpr bool USE_LOOP_PREDICTOR       = true;
-  static constexpr bool USE_SC                   = true;
+  //static constexpr bool USE_LOOP_PREDICTOR       = true;
+  //static constexpr bool USE_SC                   = true;
+  static constexpr bool USE_LOOP_PREDICTOR       = false;
+  static constexpr bool USE_SC                   = false;
   static constexpr int  CONFIDENCE_COUNTER_WIDTH = 7;
 
   struct TAGE {
@@ -2827,8 +2841,10 @@ struct TAGE_SC_L_CONFIG_96KB_V4 {
 
 struct TAGE_SC_L_CONFIG_FUTURE_128KB_V1 {
   // static constexpr bool PIPELINE_SUPPORT = true;
-  static constexpr bool USE_LOOP_PREDICTOR       = true;
-  static constexpr bool USE_SC                   = true;
+  //static constexpr bool USE_LOOP_PREDICTOR       = true;
+  //static constexpr bool USE_SC                   = true;
+  static constexpr bool USE_LOOP_PREDICTOR       = false;
+  static constexpr bool USE_SC                   = false;
   static constexpr int  CONFIDENCE_COUNTER_WIDTH = 7;
 
   struct TAGE {
@@ -3138,8 +3154,10 @@ struct TAGE_SC_L_CONFIG_128KB_V3 {
 
 struct TAGE_SC_L_CONFIG_FUTURE_192KB_V1 {
   // static constexpr bool PIPELINE_SUPPORT = true;
-  static constexpr bool USE_LOOP_PREDICTOR       = true;
-  static constexpr bool USE_SC                   = true;
+  //static constexpr bool USE_LOOP_PREDICTOR       = true;
+  //static constexpr bool USE_SC                   = true;
+  static constexpr bool USE_LOOP_PREDICTOR       = false;
+  static constexpr bool USE_SC                   = false;
   static constexpr int  CONFIDENCE_COUNTER_WIDTH = 7;
 
   struct TAGE {
@@ -3447,8 +3465,10 @@ struct TAGE_SC_L_CONFIG_192KB_V3 {
 
 struct TAGE_SC_L_CONFIG_FUTURE_192KB_WITH_64K_PER_BANK {
   // static constexpr bool PIPELINE_SUPPORT = true;
-  static constexpr bool USE_LOOP_PREDICTOR       = true;
-  static constexpr bool USE_SC                   = true;
+  //static constexpr bool USE_LOOP_PREDICTOR       = true;
+  //static constexpr bool USE_SC                   = true;
+  static constexpr bool USE_LOOP_PREDICTOR       = false;
+  static constexpr bool USE_SC                   = false;
   static constexpr int  CONFIDENCE_COUNTER_WIDTH = 7;
 
   struct TAGE {

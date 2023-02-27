@@ -84,11 +84,96 @@ Branch_Type get_branch_type(uns proc_id, Cf_Type cf_type) {
 void bp_future_tage_init() {
   if(future_tages.size() == 0) {
     future_tages.reserve(NUM_CORES);
-    for(uns i = 0; i < NUM_CORES; ++i) {
-      future_tages.push_back(
-        std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_FUTURE_64KB>>(NODE_TABLE_SIZE));
-      l0_across_all_cores.push_back(Cache_cpp<l0_btb_entry>("l0_btb", L0_BTB_SIZE, L0_BTB_ASSOC, 1, SRRIP_REPL));
+    if(FUTURE_TAGE_SIZE_KB==64)
+    {
+      for(uns i = 0; i < NUM_CORES; ++i) {
+        future_tages.push_back(
+          std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_FUTURE_64KB>>(NODE_TABLE_SIZE));
+        l0_across_all_cores.push_back(Cache_cpp<l0_btb_entry>("l0_btb", L0_BTB_SIZE, L0_BTB_ASSOC, 1, SRRIP_REPL));
+      }
     }
+    else if(FUTURE_TAGE_SIZE_KB==56)
+    {
+      for(uns i = 0; i < NUM_CORES; ++i) {
+        future_tages.push_back(
+          std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_FUTURE_56KB>>(NODE_TABLE_SIZE));
+        l0_across_all_cores.push_back(Cache_cpp<l0_btb_entry>("l0_btb", L0_BTB_SIZE, L0_BTB_ASSOC, 1, SRRIP_REPL));
+      }
+    }
+    else if(FUTURE_TAGE_SIZE_KB==48)
+    {
+      for(uns i = 0; i < NUM_CORES; ++i) {
+        future_tages.push_back(
+          std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_FUTURE_48KB>>(NODE_TABLE_SIZE));
+        l0_across_all_cores.push_back(Cache_cpp<l0_btb_entry>("l0_btb", L0_BTB_SIZE, L0_BTB_ASSOC, 1, SRRIP_REPL));
+      }
+    }
+    else if(FUTURE_TAGE_SIZE_KB==40)
+
+    {
+      for(uns i = 0; i < NUM_CORES; ++i) {
+        future_tages.push_back(
+          std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_FUTURE_40KB>>(NODE_TABLE_SIZE));
+        l0_across_all_cores.push_back(Cache_cpp<l0_btb_entry>("l0_btb", L0_BTB_SIZE, L0_BTB_ASSOC, 1, SRRIP_REPL));
+      }
+    }
+    else if(FUTURE_TAGE_SIZE_KB==32)
+    {
+      for(uns i = 0; i < NUM_CORES; ++i) {
+        future_tages.push_back(
+          std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_FUTURE_32KB>>(NODE_TABLE_SIZE));
+        l0_across_all_cores.push_back(Cache_cpp<l0_btb_entry>("l0_btb", L0_BTB_SIZE, L0_BTB_ASSOC, 1, SRRIP_REPL));
+      }
+    }
+    else if(FUTURE_TAGE_SIZE_KB==16)
+    {
+      for(uns i = 0; i < NUM_CORES; ++i) {
+        future_tages.push_back(
+          std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_FUTURE_16KB>>(NODE_TABLE_SIZE));
+        l0_across_all_cores.push_back(Cache_cpp<l0_btb_entry>("l0_btb", L0_BTB_SIZE, L0_BTB_ASSOC, 1, SRRIP_REPL));
+      }
+    }
+    else if(FUTURE_TAGE_SIZE_KB==8)
+    {
+      for(uns i = 0; i < NUM_CORES; ++i) {
+        future_tages.push_back(
+          std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_FUTURE_8KB>>(NODE_TABLE_SIZE));
+        l0_across_all_cores.push_back(Cache_cpp<l0_btb_entry>("l0_btb", L0_BTB_SIZE, L0_BTB_ASSOC, 1, SRRIP_REPL));
+      }
+    }
+    else if(FUTURE_TAGE_SIZE_KB==96)
+    {
+      for(uns i = 0; i < NUM_CORES; ++i) {
+        future_tages.push_back(
+          std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_FUTURE_96KB_V1>>(NODE_TABLE_SIZE));
+        l0_across_all_cores.push_back(Cache_cpp<l0_btb_entry>("l0_btb", L0_BTB_SIZE, L0_BTB_ASSOC, 1, SRRIP_REPL));
+      }
+    }
+    else if(FUTURE_TAGE_SIZE_KB==128)
+    {
+      for(uns i = 0; i < NUM_CORES; ++i) {
+        future_tages.push_back(
+          std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_FUTURE_128KB_V1>>(NODE_TABLE_SIZE));
+        l0_across_all_cores.push_back(Cache_cpp<l0_btb_entry>("l0_btb", L0_BTB_SIZE, L0_BTB_ASSOC, 1, SRRIP_REPL));
+      }
+    }
+    else if(FUTURE_TAGE_SIZE_KB==192)
+    {
+      for(uns i = 0; i < NUM_CORES; ++i) {
+        future_tages.push_back(
+          std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_FUTURE_192KB_V1>>(NODE_TABLE_SIZE));
+        l0_across_all_cores.push_back(Cache_cpp<l0_btb_entry>("l0_btb", L0_BTB_SIZE, L0_BTB_ASSOC, 1, SRRIP_REPL));
+      }
+    }
+    else if(FUTURE_TAGE_SIZE_KB==0)
+    {
+      for(uns i = 0; i < NUM_CORES; ++i) {
+        future_tages.push_back(
+          std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_FUTURE_192KB_WITH_64K_PER_BANK>>(NODE_TABLE_SIZE));
+        l0_across_all_cores.push_back(Cache_cpp<l0_btb_entry>("l0_btb", L0_BTB_SIZE, L0_BTB_ASSOC, 1, SRRIP_REPL));
+      }
+    }
+    else ASSERTM(0, false, "Future tage size %uKB config not supported\n", FUTURE_TAGE_SIZE_KB); 
   }
   ASSERT(0, STALE_HISTORY_DISTANCE != 0);
   ASSERTM(0, future_tages.size() == NUM_CORES,
