@@ -232,7 +232,7 @@ void Tage_SC_L<CONFIG>::commit_state(int64_t branch_id, uint64_t br_pc,
   }
   if(CONFIG::USE_SC) {
     statistical_corrector_.commit_state(
-      br_pc, resolve_dir, prediction_info.tage, prediction_info.sc,
+      prediction_info.tage.pred_pc, resolve_dir, prediction_info.tage, prediction_info.sc,
       prediction_info.tage_or_loop_prediction);
   }
 
@@ -244,11 +244,11 @@ void Tage_SC_L<CONFIG>::commit_state(int64_t branch_id, uint64_t br_pc,
       }
     }
     loop_predictor_.commit_state(
-      br_pc, resolve_dir, prediction_info.loop,
+      prediction_info.tage.pred_pc, resolve_dir, prediction_info.loop,
       prediction_info.final_prediction != resolve_dir,
       prediction_info.tage.prediction);
     loop_predictor_.commit_state_at_retire(
-      br_pc, resolve_dir, prediction_info.loop,
+      prediction_info.tage.pred_pc, resolve_dir, prediction_info.loop,
       prediction_info.final_prediction != resolve_dir,
       prediction_info.tage.prediction);
   }
@@ -328,7 +328,7 @@ void Tage_SC_L<CONFIG>::commit_state_at_retire_real_stale(int64_t     branch_id,
                                                bool        resolve_dir,
                                                uint64_t    br_target,
                                                int64_t     update_id) {
-  assert(CONFIG::TAGE::USE_REAL_STALE_HIST_PC);
+  //assert(CONFIG::TAGE::USE_REAL_STALE_HIST_PC);
   auto& prediction_info = prediction_info_buffer_[branch_id];
   // if (CONFIG::USE_LOOP_PREDICTOR) {
   //  loop_predictor_.commit_state_at_retire(

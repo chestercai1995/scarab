@@ -37,6 +37,9 @@ Bp bp_table [] = {
     { PC_TABLE_BP,  "pc_table",  bp_pc_table_init,    bp_pc_table_timestamp,   bp_pc_table_pred,  bp_pc_table_spec_update,   bp_pc_table_update,   bp_pc_table_retire,   bp_pc_table_recover  },    
     { FUTURE_TAGE_BP,"future_tage",  bp_future_tage_init,   bp_future_tage_timestamp,   bp_future_tage_pred,  bp_future_tage_spec_update,   bp_future_tage_update,   bp_future_tage_retire,   bp_future_tage_recover  },    
     { REAL_FUTURE_TAGE_BP,"real_future_tage",  bp_real_future_tage_init,   bp_real_future_tage_timestamp,   bp_real_future_tage_pred,  bp_real_future_tage_spec_update,   bp_real_future_tage_update,   bp_real_future_tage_retire,   bp_real_future_tage_recover  },    
+    { GSHARE_BTB_BP,"gshare_btb",bp_gshare_btb_init,   bp_gshare_btb_timestamp,   bp_gshare_btb_pred,  bp_gshare_btb_spec_update,   bp_gshare_btb_update,   bp_gshare_btb_retire,   bp_gshare_btb_recover  },    
+    { FFP_DIR_BP,   "ffp_dir",bp_ffp_dir_init,   bp_ffp_dir_timestamp,   bp_ffp_dir_pred,  bp_ffp_dir_spec_update,   bp_ffp_dir_update,   bp_ffp_dir_retire,   bp_ffp_dir_recover  },    
+    { FFP_MUL_TAGE_BP,"ffp_mul_tage",bp_ffp_mul_tage_init,bp_ffp_mul_tage_timestamp,bp_ffp_mul_tage_pred,bp_ffp_mul_tage_spec_update,bp_ffp_mul_tage_update,   bp_ffp_mul_tage_retire,   bp_ffp_mul_tage_recover  },    
 #define DEF_CBP(CBP_NAME, CBP_CLASS) \
     { CBP_CLASS ## _BP,    CBP_NAME,   SCARAB_BP_INTF_FUNC(CBP_CLASS, init), SCARAB_BP_INTF_FUNC(CBP_CLASS, timestamp), SCARAB_BP_INTF_FUNC(CBP_CLASS, pred), SCARAB_BP_INTF_FUNC(CBP_CLASS, spec_update), SCARAB_BP_INTF_FUNC(CBP_CLASS, update), SCARAB_BP_INTF_FUNC(CBP_CLASS, retire), SCARAB_BP_INTF_FUNC(CBP_CLASS, recover)}, 
 #include "cbp_table.def"

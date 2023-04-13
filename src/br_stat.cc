@@ -1,3 +1,4 @@
+extern "C" {
 #include "globals/assert.h"
 #include "globals/global_defs.h"
 #include "globals/global_types.h"
@@ -20,11 +21,13 @@
 #include "memory/memory.param.h"
 #include "sim.h"
 #include "statistics.h"
+}
 
 #include "bp/tagescl.h"
 #include "br_stat.h"
 #include <unordered_map>
 #include <vector>
+#include <deque>
 #include <algorithm>
 #include <stdio.h>
 #include <stdlib.h>
@@ -37,6 +40,7 @@ class per_branch_stat{
   uns64 times_not_taken;
   uns64 early_mispred;
   uns64 late_mispred;
+  std::unordered_map<Addr, uint64_t> following_brs_stat;
   
   per_branch_stat(){
     pc = 0;
@@ -53,6 +57,7 @@ class per_branch_stat{
 };
 
 std::unordered_map<Addr, per_branch_stat> br_stats;
+std::deque<Addr> last_N_brs;
 //FILE *fp1 = fopen("warmup_stat.csv", "w");
 
 void collect_br_stats(Op* op){
@@ -75,6 +80,19 @@ void collect_br_stats(Op* op){
   if(op->oracle_info.l1_mispred){
     br_stats[pc].late_mispred++;
   }
+  //if(last_N_brs.size() == STALE_HISTORY_DISTANCE) {
+  //  Addr lead_br_pc = last_N_brs.front();
+  //  ASSERT(0, br_stats.find(lead_br_pc) != br_stats.end());
+  //  if(br_stats[lead_br_pc].following_brs_stat.find(pc) == br_stats[lead_br_pc].following_brs_stat.end()){
+  //    // need to create a new entry
+  //    br_stats[lead_br_pc].following_brs_stat[pc] = 1;
+  //  }
+  //  else{
+  //    br_stats[lead_br_pc].following_brs_stat[pc] += 1;
+  //  }
+  //  last_N_brs.pop_front();
+  //}
+  //last_N_brs.push_back(pc);
 }
 
 void final_br_stat_print(){
@@ -114,6 +132,28 @@ void final_br_stat_print(){
     fprintf(fp, "%llu,%llu,%llu,%llu\n", item.second.times_taken, item.second.times_not_taken, item.second.early_mispred, item.second.late_mispred);
   }
   fclose(fp);
+
+  //fp = fopen("br_N_after.csv", "w");
+  //for(auto item:br_stats){
+  //  fprintf(fp, "%llx,", item.first);
+  //  fprintf(fp, "%lu,", item.second.following_brs_stat.size());
+  //  for(auto br_pc:item.second.following_brs_stat){
+  //    fprintf(fp, "%llx, %lu", br_pc.first, br_pc.second);
+  //  }
+  //  fprintf(fp, "\n");
+  //}
+  //fclose(fp);
+
+  //fp = fopen("br_N_after_wo_pc.csv", "w");
+  //for(auto item:br_stats){
+  //  fprintf(fp, "%llx,", item.first);
+  //  fprintf(fp, "%lu,", item.second.following_brs_stat.size());
+  //  for(auto br_pc:item.second.following_brs_stat){
+  //    fprintf(fp, "%lu", br_pc.second);
+  //  }
+  //  fprintf(fp, "\n");
+  //}
+  //fclose(fp);
 }
 
 

@@ -84,96 +84,96 @@ Branch_Type get_branch_type(uns proc_id, Cf_Type cf_type) {
 void bp_future_tage_init() {
   if(future_tages.size() == 0) {
     future_tages.reserve(NUM_CORES);
-    if(FUTURE_TAGE_SIZE_KB==64)
-    {
+    //if(FUTURE_TAGE_SIZE_KB==64)
+    //{
       for(uns i = 0; i < NUM_CORES; ++i) {
         future_tages.push_back(
           std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_FUTURE_64KB>>(NODE_TABLE_SIZE));
         l0_across_all_cores.push_back(Cache_cpp<l0_btb_entry>("l0_btb", L0_BTB_SIZE, L0_BTB_ASSOC, 1, SRRIP_REPL));
       }
-    }
-    else if(FUTURE_TAGE_SIZE_KB==56)
-    {
-      for(uns i = 0; i < NUM_CORES; ++i) {
-        future_tages.push_back(
-          std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_FUTURE_56KB>>(NODE_TABLE_SIZE));
-        l0_across_all_cores.push_back(Cache_cpp<l0_btb_entry>("l0_btb", L0_BTB_SIZE, L0_BTB_ASSOC, 1, SRRIP_REPL));
-      }
-    }
-    else if(FUTURE_TAGE_SIZE_KB==48)
-    {
-      for(uns i = 0; i < NUM_CORES; ++i) {
-        future_tages.push_back(
-          std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_FUTURE_48KB>>(NODE_TABLE_SIZE));
-        l0_across_all_cores.push_back(Cache_cpp<l0_btb_entry>("l0_btb", L0_BTB_SIZE, L0_BTB_ASSOC, 1, SRRIP_REPL));
-      }
-    }
-    else if(FUTURE_TAGE_SIZE_KB==40)
+    //}
+    //else if(FUTURE_TAGE_SIZE_KB==56)
+    //{
+    //  for(uns i = 0; i < NUM_CORES; ++i) {
+    //    future_tages.push_back(
+    //      std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_FUTURE_56KB>>(NODE_TABLE_SIZE));
+    //    l0_across_all_cores.push_back(Cache_cpp<l0_btb_entry>("l0_btb", L0_BTB_SIZE, L0_BTB_ASSOC, 1, SRRIP_REPL));
+    //  }
+    //}
+    //else if(FUTURE_TAGE_SIZE_KB==48)
+    //{
+    //  for(uns i = 0; i < NUM_CORES; ++i) {
+    //    future_tages.push_back(
+    //      std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_FUTURE_48KB>>(NODE_TABLE_SIZE));
+    //    l0_across_all_cores.push_back(Cache_cpp<l0_btb_entry>("l0_btb", L0_BTB_SIZE, L0_BTB_ASSOC, 1, SRRIP_REPL));
+    //  }
+    //}
+    //else if(FUTURE_TAGE_SIZE_KB==40)
 
-    {
-      for(uns i = 0; i < NUM_CORES; ++i) {
-        future_tages.push_back(
-          std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_FUTURE_40KB>>(NODE_TABLE_SIZE));
-        l0_across_all_cores.push_back(Cache_cpp<l0_btb_entry>("l0_btb", L0_BTB_SIZE, L0_BTB_ASSOC, 1, SRRIP_REPL));
-      }
-    }
-    else if(FUTURE_TAGE_SIZE_KB==32)
-    {
-      for(uns i = 0; i < NUM_CORES; ++i) {
-        future_tages.push_back(
-          std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_FUTURE_32KB>>(NODE_TABLE_SIZE));
-        l0_across_all_cores.push_back(Cache_cpp<l0_btb_entry>("l0_btb", L0_BTB_SIZE, L0_BTB_ASSOC, 1, SRRIP_REPL));
-      }
-    }
-    else if(FUTURE_TAGE_SIZE_KB==16)
-    {
-      for(uns i = 0; i < NUM_CORES; ++i) {
-        future_tages.push_back(
-          std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_FUTURE_16KB>>(NODE_TABLE_SIZE));
-        l0_across_all_cores.push_back(Cache_cpp<l0_btb_entry>("l0_btb", L0_BTB_SIZE, L0_BTB_ASSOC, 1, SRRIP_REPL));
-      }
-    }
-    else if(FUTURE_TAGE_SIZE_KB==8)
-    {
-      for(uns i = 0; i < NUM_CORES; ++i) {
-        future_tages.push_back(
-          std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_FUTURE_8KB>>(NODE_TABLE_SIZE));
-        l0_across_all_cores.push_back(Cache_cpp<l0_btb_entry>("l0_btb", L0_BTB_SIZE, L0_BTB_ASSOC, 1, SRRIP_REPL));
-      }
-    }
-    else if(FUTURE_TAGE_SIZE_KB==96)
-    {
-      for(uns i = 0; i < NUM_CORES; ++i) {
-        future_tages.push_back(
-          std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_FUTURE_96KB_V1>>(NODE_TABLE_SIZE));
-        l0_across_all_cores.push_back(Cache_cpp<l0_btb_entry>("l0_btb", L0_BTB_SIZE, L0_BTB_ASSOC, 1, SRRIP_REPL));
-      }
-    }
-    else if(FUTURE_TAGE_SIZE_KB==128)
-    {
-      for(uns i = 0; i < NUM_CORES; ++i) {
-        future_tages.push_back(
-          std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_FUTURE_128KB_V1>>(NODE_TABLE_SIZE));
-        l0_across_all_cores.push_back(Cache_cpp<l0_btb_entry>("l0_btb", L0_BTB_SIZE, L0_BTB_ASSOC, 1, SRRIP_REPL));
-      }
-    }
-    else if(FUTURE_TAGE_SIZE_KB==192)
-    {
-      for(uns i = 0; i < NUM_CORES; ++i) {
-        future_tages.push_back(
-          std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_FUTURE_192KB_V1>>(NODE_TABLE_SIZE));
-        l0_across_all_cores.push_back(Cache_cpp<l0_btb_entry>("l0_btb", L0_BTB_SIZE, L0_BTB_ASSOC, 1, SRRIP_REPL));
-      }
-    }
-    else if(FUTURE_TAGE_SIZE_KB==0)
-    {
-      for(uns i = 0; i < NUM_CORES; ++i) {
-        future_tages.push_back(
-          std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_FUTURE_192KB_WITH_64K_PER_BANK>>(NODE_TABLE_SIZE));
-        l0_across_all_cores.push_back(Cache_cpp<l0_btb_entry>("l0_btb", L0_BTB_SIZE, L0_BTB_ASSOC, 1, SRRIP_REPL));
-      }
-    }
-    else ASSERTM(0, false, "Future tage size %uKB config not supported\n", FUTURE_TAGE_SIZE_KB); 
+    //{
+    //  for(uns i = 0; i < NUM_CORES; ++i) {
+    //    future_tages.push_back(
+    //      std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_FUTURE_40KB>>(NODE_TABLE_SIZE));
+    //    l0_across_all_cores.push_back(Cache_cpp<l0_btb_entry>("l0_btb", L0_BTB_SIZE, L0_BTB_ASSOC, 1, SRRIP_REPL));
+    //  }
+    //}
+    //else if(FUTURE_TAGE_SIZE_KB==32)
+    //{
+    //  for(uns i = 0; i < NUM_CORES; ++i) {
+    //    future_tages.push_back(
+    //      std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_FUTURE_32KB>>(NODE_TABLE_SIZE));
+    //    l0_across_all_cores.push_back(Cache_cpp<l0_btb_entry>("l0_btb", L0_BTB_SIZE, L0_BTB_ASSOC, 1, SRRIP_REPL));
+    //  }
+    //}
+    //else if(FUTURE_TAGE_SIZE_KB==16)
+    //{
+    //  for(uns i = 0; i < NUM_CORES; ++i) {
+    //    future_tages.push_back(
+    //      std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_FUTURE_16KB>>(NODE_TABLE_SIZE));
+    //    l0_across_all_cores.push_back(Cache_cpp<l0_btb_entry>("l0_btb", L0_BTB_SIZE, L0_BTB_ASSOC, 1, SRRIP_REPL));
+    //  }
+    //}
+    //else if(FUTURE_TAGE_SIZE_KB==8)
+    //{
+    //  for(uns i = 0; i < NUM_CORES; ++i) {
+    //    future_tages.push_back(
+    //      std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_FUTURE_8KB>>(NODE_TABLE_SIZE));
+    //    l0_across_all_cores.push_back(Cache_cpp<l0_btb_entry>("l0_btb", L0_BTB_SIZE, L0_BTB_ASSOC, 1, SRRIP_REPL));
+    //  }
+    //}
+    //else if(FUTURE_TAGE_SIZE_KB==96)
+    //{
+    //  for(uns i = 0; i < NUM_CORES; ++i) {
+    //    future_tages.push_back(
+    //      std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_FUTURE_96KB_V1>>(NODE_TABLE_SIZE));
+    //    l0_across_all_cores.push_back(Cache_cpp<l0_btb_entry>("l0_btb", L0_BTB_SIZE, L0_BTB_ASSOC, 1, SRRIP_REPL));
+    //  }
+    //}
+    //else if(FUTURE_TAGE_SIZE_KB==128)
+    //{
+    //  for(uns i = 0; i < NUM_CORES; ++i) {
+    //    future_tages.push_back(
+    //      std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_FUTURE_128KB_V1>>(NODE_TABLE_SIZE));
+    //    l0_across_all_cores.push_back(Cache_cpp<l0_btb_entry>("l0_btb", L0_BTB_SIZE, L0_BTB_ASSOC, 1, SRRIP_REPL));
+    //  }
+    //}
+    //else if(FUTURE_TAGE_SIZE_KB==192)
+    //{
+    //  for(uns i = 0; i < NUM_CORES; ++i) {
+    //    future_tages.push_back(
+    //      std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_FUTURE_192KB_V1>>(NODE_TABLE_SIZE));
+    //    l0_across_all_cores.push_back(Cache_cpp<l0_btb_entry>("l0_btb", L0_BTB_SIZE, L0_BTB_ASSOC, 1, SRRIP_REPL));
+    //  }
+    //}
+    //else if(FUTURE_TAGE_SIZE_KB==0)
+    //{
+    //  for(uns i = 0; i < NUM_CORES; ++i) {
+    //    future_tages.push_back(
+    //      std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_FUTURE_192KB_WITH_64K_PER_BANK>>(NODE_TABLE_SIZE));
+    //    l0_across_all_cores.push_back(Cache_cpp<l0_btb_entry>("l0_btb", L0_BTB_SIZE, L0_BTB_ASSOC, 1, SRRIP_REPL));
+    //  }
+    //}
+    //else ASSERTM(0, false, "Future tage size %uKB config not supported\n", FUTURE_TAGE_SIZE_KB); 
   }
   ASSERT(0, STALE_HISTORY_DISTANCE != 0);
   ASSERTM(0, future_tages.size() == NUM_CORES,
@@ -193,7 +193,7 @@ uns8 bp_future_tage_pred(Op* op) {
   Future_tage_pred future_tage_res = future_tages.at(proc_id)->get_future_pred(
     op->recovery_info.branch_id, op->inst_info->addr);
   
-  DEBUG(op->proc_id, "future tage on op %llu, pc is %lx, pred is %d\n", op->op_num, future_tage_res.pc, future_tage_res.pred);
+  //DEBUG(op->proc_id, "future tage on op %llu, pc is %lx, pred is %d\n", op->op_num, future_tage_res.pc, future_tage_res.pred);
 
   if(future_tage_res.pc == op->inst_info->addr && future_tage_res.pred == op->oracle_info.dir){
     INC_STAT_EVENT(op->proc_id, FUTURE_TAGE_EXACTLY_RIGHT, 1);  
@@ -208,7 +208,7 @@ uns8 bp_future_tage_pred(Op* op) {
     ASSERT(0, false);
   }
   if((cycle_count > last_flush_cycle + FUTURE_TAGE_LATENCY + 1) || (!REALISTIC_FLUSH_PENALTY)){
-    DEBUG(op->proc_id, "updating l0 btb\n");
+    //DEBUG(op->proc_id, "updating l0 btb\n");
     if(future_tage_res.pred){
       Cache_access_result<l0_btb_entry> car_res = l0_btb.probe(op->proc_id, future_tage_res.pc);
       if(!car_res.hit){
@@ -229,8 +229,8 @@ uns8 bp_future_tage_pred(Op* op) {
   Flag hit = res.hit;
   Flag counter_taken = res.data.counter>1;
 
-  DEBUG(op->proc_id, "Predicting for op_num:%s addr:%s, p_dir:%d, t_dir:%d\n",
-        unsstr64(op->op_num), hexstr64s(pc), hit, op->oracle_info.dir);
+  //DEBUG(op->proc_id, "Predicting for op_num:%s addr:%s, p_dir:%d, t_dir:%d\n",
+  //      unsstr64(op->op_num), hexstr64s(pc), hit, op->oracle_info.dir);
   if(USE_2_BIT_COUNTER_IN_L0) 
     return hit && counter_taken; 
   else 
@@ -271,7 +271,7 @@ void bp_future_tage_update(Op* op) {
           if(!insert_res.hit){
             printf("nothing replaced\n");
           }
-          DEBUG(proc_id, "write l0btb op %llu, pc=x%llx, repl: %d, replpc = %llx\n", op->op_num, pc, insert_res.hit, insert_res.line_addr);
+          //DEBUG(proc_id, "write l0btb op %llu, pc=x%llx, repl: %d, replpc = %llx\n", op->op_num, pc, insert_res.hit, insert_res.line_addr);
       }
       else 
       {
@@ -279,7 +279,7 @@ void bp_future_tage_update(Op* op) {
         if(counter_val<3) counter_val++;
         l0_btb.data[access_res.cache_addr.set][access_res.cache_addr.way].counter = counter_val;
       }
-      DEBUG(proc_id, "Drop l0btb for l0btb hit op %llu\n", op->op_num);
+      //DEBUG(proc_id, "Drop l0btb for l0btb hit op %llu\n", op->op_num);
     } 
     else{
       //DEBUG(proc_id, "Drop l0btb for NT op %llu\n", op->op_num);

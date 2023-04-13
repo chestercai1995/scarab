@@ -699,6 +699,9 @@ static inline Icache_State icache_issue_ops(Break_Reason* break_fetch,
             }
           }
         } else {
+          if(USE_LATE_BP && !op->oracle_info.btb_miss){
+            op->oracle_info.current_mispred = op->oracle_info.late_mispred;
+          }
           packet_break = PB_BREAK_AFTER;
           *break_fetch = BREAK_OFFPATH;
         }

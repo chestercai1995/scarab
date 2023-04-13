@@ -46,6 +46,9 @@
 #include "bp/pc_table.h"
 #include "bp/future_tage.h"
 #include "bp/real_future_tage.h"
+#include "bp/gshare_btb.h"
+#include "bp/ffp_dir.h"
+#include "bp/ffp_mul_tage.h"
 #include "libs/cache_lib.h"
 #include "model.h"
 #include "thread.h"
@@ -396,7 +399,7 @@ Addr bp_predict_op(Bp_Data* bp_data, Op* op, uns br_num, Addr fetch_addr) {
     case CF_BR:
       op->oracle_info.pred      = TAKEN;
       op->oracle_info.late_pred = TAKEN;
-      if(BP_MECH == PC_TABLE_BP || BP_MECH == FUTURE_TAGE_BP || BP_MECH == REAL_FUTURE_TAGE_BP){
+      if(BP_MECH == PC_TABLE_BP || BP_MECH == FUTURE_TAGE_BP || BP_MECH == REAL_FUTURE_TAGE_BP || BP_MECH == GSHARE_BTB_BP || BP_MECH == FFP_DIR_BP || BP_MECH == FFP_MUL_TAGE_BP){
         op->oracle_info.pred    = bp_data->bp->pred_func(op);
       }
       if(!op->off_path)
@@ -436,7 +439,7 @@ Addr bp_predict_op(Bp_Data* bp_data, Op* op, uns br_num, Addr fetch_addr) {
     case CF_CALL:
       op->oracle_info.pred      = TAKEN;
       op->oracle_info.late_pred = TAKEN;
-      if(BP_MECH == PC_TABLE_BP || BP_MECH == FUTURE_TAGE_BP || BP_MECH == REAL_FUTURE_TAGE_BP){
+      if(BP_MECH == PC_TABLE_BP || BP_MECH == FUTURE_TAGE_BP || BP_MECH == REAL_FUTURE_TAGE_BP || BP_MECH == GSHARE_BTB_BP || BP_MECH == FFP_DIR_BP || BP_MECH == FFP_MUL_TAGE_BP){
         op->oracle_info.pred    = bp_data->bp->pred_func(op);
       }
       if(ENABLE_CRS)
@@ -450,7 +453,7 @@ Addr bp_predict_op(Bp_Data* bp_data, Op* op, uns br_num, Addr fetch_addr) {
     case CF_IBR:
       op->oracle_info.pred      = TAKEN;
       op->oracle_info.late_pred = TAKEN;
-      if(BP_MECH == REAL_FUTURE_TAGE_BP){
+      if(BP_MECH == REAL_FUTURE_TAGE_BP || BP_MECH == FFP_DIR_BP || BP_MECH == FFP_MUL_TAGE_BP){
         bp_data->bp->pred_func(op);
       }
       if(ENABLE_IBP) {
@@ -476,7 +479,7 @@ Addr bp_predict_op(Bp_Data* bp_data, Op* op, uns br_num, Addr fetch_addr) {
     case CF_ICALL:
       op->oracle_info.pred      = TAKEN;
       op->oracle_info.late_pred = TAKEN;
-      if(BP_MECH == REAL_FUTURE_TAGE_BP){
+      if(BP_MECH == REAL_FUTURE_TAGE_BP || BP_MECH == FFP_DIR_BP || BP_MECH == FFP_MUL_TAGE_BP){
         bp_data->bp->pred_func(op);
       }
       if(ENABLE_IBP) {
@@ -505,7 +508,7 @@ Addr bp_predict_op(Bp_Data* bp_data, Op* op, uns br_num, Addr fetch_addr) {
     case CF_ICO:
       op->oracle_info.pred      = TAKEN;
       op->oracle_info.late_pred = TAKEN;
-      if(BP_MECH == REAL_FUTURE_TAGE_BP){
+      if(BP_MECH == REAL_FUTURE_TAGE_BP || BP_MECH == FFP_DIR_BP || BP_MECH == FFP_MUL_TAGE_BP){
         bp_data->bp->pred_func(op);
       }
       if(ENABLE_CRS) {
@@ -522,7 +525,7 @@ Addr bp_predict_op(Bp_Data* bp_data, Op* op, uns br_num, Addr fetch_addr) {
     case CF_RET:
       op->oracle_info.pred      = TAKEN;
       op->oracle_info.late_pred = TAKEN;
-      if(BP_MECH == REAL_FUTURE_TAGE_BP){
+      if(BP_MECH == REAL_FUTURE_TAGE_BP || BP_MECH == FFP_DIR_BP || BP_MECH == FFP_MUL_TAGE_BP){
         bp_data->bp->pred_func(op);
       }
       if(ENABLE_CRS)
@@ -645,6 +648,12 @@ Addr bp_predict_op(Bp_Data* bp_data, Op* op, uns br_num, Addr fetch_addr) {
       STAT_EVENT(op->proc_id, BTB_ON_PATH_MISS);
     else
       STAT_EVENT(op->proc_id, BTB_OFF_PATH_MISS);
+  }
+
+  if(op->table_info->cf_type == CF_BR || op->table_info->cf_type == CF_CBR || op->table_info->cf_type == CF_CALL){
+    if(!op->oracle_info.mispred && !op->oracle_info.misfetch){
+      INC_STAT_EVENT(op->proc_id, CORRECT_PRED_DIRECT, 1);  
+    }
   }
 
   STAT_EVENT(op->proc_id, BP_ON_PATH_CORRECT + op->oracle_info.mispred +
@@ -779,7 +788,7 @@ void bp_resolve_op(Bp_Data* bp_data, Op* op) {
     return;
   }
   Flag skip = FALSE;
-  if(SKIP_L0_ON_LATE_MISPRED && op->oracle_info.late_pred){
+  if(SKIP_L0_ON_LATE_MISPRED && op->oracle_info.late_mispred){
     skip = TRUE;  
   }
 

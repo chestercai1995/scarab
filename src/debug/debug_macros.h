@@ -57,8 +57,6 @@ output when
     (!DEBUG_INST_STOP || inst_count[proc_id] <= DEBUG_INST_STOP)) || \
    ((DEBUG_CYCLE_START && cycle_count >= DEBUG_CYCLE_START) &&       \
     (!DEBUG_CYCLE_STOP || cycle_count <= DEBUG_CYCLE_STOP)) ||       \
-   ((DEBUG_TIME_START && freq_time() >= DEBUG_TIME_START) &&         \
-    (!DEBUG_TIME_STOP || freq_time() <= DEBUG_TIME_STOP)) ||         \
    ((DEBUG_OP_START && op_count[proc_id] >= DEBUG_OP_START) &&       \
     (!DEBUG_OP_STOP || op_count[proc_id] <= DEBUG_OP_STOP)))
 

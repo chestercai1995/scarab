@@ -183,6 +183,9 @@ typedef enum Bp_Id_enum {
   PC_TABLE_BP,
   FUTURE_TAGE_BP,
   REAL_FUTURE_TAGE_BP,
+  GSHARE_BTB_BP,
+  FFP_DIR_BP,
+  FFP_MUL_TAGE_BP,
 #define DEF_CBP(CBP_NAME, CBP_CLASS) CBP_CLASS##_BP,
 #include "cbp_table.def"
 #undef DEF_CBP

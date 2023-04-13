@@ -22,6 +22,7 @@
 #include "real_future_tage.h"
 
 #include <iostream>
+#include <unordered_map>
 #include <memory>
 
 #include "libs/cache_lib/cache.h"
@@ -52,11 +53,17 @@ struct delay_queue_entry{
   uint64_t insert_cycle;
 };
 
+struct blacklist_entry{
+  uint32_t counter;
+};
+
 std::vector<Cache_cpp<l0_btb_entry>> l0_across_all_cores;
 // A vector of TAGE-SC-L tables. One table per core.
 std::vector<std::unique_ptr<Tage_SC_L_Base>> future_tages;
 
 std::deque<delay_queue_entry> future_tage_response_delay_queue;
+
+std::unordered_map<Addr, blacklist_entry> ffp_blacklist;
 // Helper function for producing a Branch_Type struct.
 Branch_Type get_branch_type(uns proc_id, Cf_Type cf_type) {
   Branch_Type br_type;
@@ -92,14 +99,36 @@ void bp_real_future_tage_init() {
   if(future_tages.size() == 0) {
     future_tages.reserve(NUM_CORES);
     for(uns i = 0; i < NUM_CORES; ++i) {
-      future_tages.push_back(
-        std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_REAL_FUTURE_64KB>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
+      if(FUTURE_TAGE_SIZE_KB == 64){
+        future_tages.push_back(
+          std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_REAL_FUTURE_64KB>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
+      }
+      //else if(FUTURE_TAGE_SIZE_KB == 48){
+      //  future_tages.push_back(
+      //    std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_REAL_FUTURE_48KB>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
+      //}
+      //else if(FUTURE_TAGE_SIZE_KB == 32){
+      //  future_tages.push_back(
+      //    std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_REAL_FUTURE_32KB>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
+      //}
+      //else if(FUTURE_TAGE_SIZE_KB == 16){
+      //  future_tages.push_back(
+      //    std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_REAL_FUTURE_16KB>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
+      //}
+      //else if(FUTURE_TAGE_SIZE_KB == 8){
+      //  future_tages.push_back(
+      //    std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_REAL_FUTURE_8KB>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
+      //}
+      else {
+        ASSERT(0, false);
+      }
       l0_across_all_cores.push_back(Cache_cpp<l0_btb_entry>("l0_btb", L0_BTB_SIZE, L0_BTB_ASSOC, 1, SRRIP_REPL));
     }
   }
   ASSERT(0, STALE_HISTORY_DISTANCE != 0);
   ASSERTM(0, future_tages.size() == NUM_CORES,
           "future_tages not initialized correctly");
+  ASSERT(0, (!FUTURE_TAGE_NO_UPDATE) || INSERT_FUTURE_TAGE_ON_TAKEN);
 }
 
 void bp_real_future_tage_timestamp(Op* op) { 
@@ -112,10 +141,24 @@ void bp_real_future_tage_timestamp(Op* op) {
 
 uns8 bp_real_future_tage_pred(Op* op) {
   uns proc_id = op->proc_id;
+
   auto&       l0_btb      = l0_across_all_cores.at(op->proc_id);
 
+  Addr        pc          = op->inst_info->addr;
+  Cache_access_result<l0_btb_entry> res = l0_btb.probe(op->proc_id, pc);
+  Flag hit = res.hit;
+  Flag counter_taken = res.data.counter>1;
+  Flag btb_prediction = USE_2_BIT_COUNTER_IN_L0 ? hit : hit && counter_taken;
+  if(!op->off_path){
+    printf("L0BTB: pc %llx id %lld, pred is %d, true_dir %d\n", op->inst_info->addr, op->recovery_info.future_tage_branch_id, btb_prediction, op->oracle_info.dir);
+  }
+
+  DEBUG(proc_id, "Predicting for op_num:%s addr:%s, p_dir:%d, t_dir:%d\n",
+        unsstr64(op->op_num), hexstr64s(pc), hit, op->oracle_info.dir);
+
+
   Future_tage_pred future_tage_res = future_tages.at(proc_id)->get_future_pred(
-    op->recovery_info.branch_id, op->inst_info->addr);
+    op->recovery_info.future_tage_branch_id, op->inst_info->addr);
   
   DEBUG(op->proc_id, "future tage on op %llu, pc is %lx, pred is %d\n", op->op_num, future_tage_res.pc, future_tage_res.pred);
 
@@ -125,67 +168,135 @@ uns8 bp_real_future_tage_pred(Op* op) {
   temp_entry.branch_id = op->recovery_info.future_tage_branch_id;
 
   future_tage_response_delay_queue.push_back(temp_entry);
-  
-  for(uint32_t i = 0; i < future_tage_response_delay_queue.size(); i++){
-    delay_queue_entry temp = future_tage_response_delay_queue[i];
-    //if(cycle_count - temp.insert_cycle >= FUTURE_TAGE_LATENCY && ((!FUTURE_TAGE_ORACLE_ORDERING) || temp.branch_id <= op->recovery_info.future_tage_branch_id - STALE_HISTORY_DISTANCE)){
-    if(cycle_count - temp.insert_cycle >= FUTURE_TAGE_LATENCY){
-      if(FUTURE_TAGE_ORACLE_ORDERING){
-        if(temp.branch_id > op->recovery_info.future_tage_update_id){
-          continue;
-        }
-      }
-      DEBUG(op->proc_id, "updating l0 btb\n");
-      if(temp.future_tage_pred.pred){
-        Cache_access_result<l0_btb_entry> car_res = l0_btb.probe(op->proc_id, temp.future_tage_pred.pc);
-        if(!car_res.hit){
-          l0_btb_entry new_entry = {temp.future_tage_pred.pc, op->oracle_info.target, 2, true, false};
-          l0_btb.insert(proc_id, temp.future_tage_pred.pc, true, new_entry);
-        }
-        else{ //replaced an entry when inserting
-          if(car_res.data.insert_by_ft && !car_res.data.used){
-            INC_STAT_EVENT(op->proc_id, FUTURE_TAGE_VICTIM_NO_TOUCH, 1);  
-          }
-        }
-      }
-      else{
-        Cache_access_result<l0_btb_entry> car_res = l0_btb.probe(op->proc_id, temp.future_tage_pred.pc);
-        if(car_res.hit){
-          Cache_access_result<l0_btb_entry> inv_res = l0_btb.invalidate(proc_id, temp.future_tage_pred.pc);
-          if(inv_res.hit && inv_res.data.insert_by_ft && inv_res.data.used){
-            INC_STAT_EVENT(op->proc_id, FUTURE_TAGE_VICTIM_NO_TOUCH, 1);  
-          }
-        }
-      }
-      future_tage_response_delay_queue.pop_front();
-    }
-    else{
-      break;
-    }
+  if(!op->off_path){
+    printf("PUSH: currently at %llx, pred pc %lx, dir: %d, current id %lld\n", op->inst_info->addr, temp_entry.future_tage_pred.pc, temp_entry.future_tage_pred.pred, op->recovery_info.future_tage_branch_id);
   }
 
-  Addr        pc          = op->inst_info->addr;
-  Cache_access_result<l0_btb_entry> res = l0_btb.probe(op->proc_id, pc);
-  Flag hit = res.hit;
-  Flag counter_taken = res.data.counter>1;
-  Flag prediction = USE_2_BIT_COUNTER_IN_L0 ? hit : hit && counter_taken;
+  for(auto& element : future_tage_response_delay_queue){
+    if(element.branch_id == op->recovery_info.future_tage_update_id){
+      if(element.future_tage_pred.pc == op->inst_info->addr){
+        if(cycle_count - element.insert_cycle > FUTURE_TAGE_LATENCY){
+          if(element.future_tage_pred.pred == op->oracle_info.dir){
+            //correct pred
+            INC_STAT_EVENT(op->proc_id, FUTURE_TAGE_EXACTLY_RIGHT, 1);  
+          }
+          else{
+            //correct pc, incorrect pred
+            INC_STAT_EVENT(op->proc_id, FUTURE_TAGE_EXACTLY_DIR_WRONG, 1);  
+          }
+          op->ffp_wrong_btb_correct = FALSE;
+          op->ffp_correct_btb_wrong = FALSE;
+          op->ffp_both_correct = FALSE;
 
-  for(uint32_t i = 0; i < future_tage_response_delay_queue.size(); i++){
-    delay_queue_entry temp = future_tage_response_delay_queue[i];
-    if(pc == temp.future_tage_pred.pc && op->oracle_info.dir == temp.future_tage_pred.pred){
-      INC_STAT_EVENT(op->proc_id, FUTURE_TAGE_LATE, 1);  
-      if(prediction != op->oracle_info.dir){
-        INC_STAT_EVENT(op->proc_id, FUTURE_TAGE_TRUE_LATE, 1);  
+          if(FUTURE_TAGE_NO_UPDATE){
+            if(element.future_tage_pred.pred != op->oracle_info.dir){
+              //mispred
+              if(op->oracle_info.dir == btb_prediction){
+                op->ffp_wrong_btb_correct = TRUE;
+              }
+            }
+            else{
+              //correct_pred
+              if(op->oracle_info.dir == btb_prediction){
+                op->ffp_both_correct = TRUE;
+              }
+              else{
+                op->ffp_correct_btb_wrong = TRUE;
+              }
+            }
+            return element.future_tage_pred.pred;
+          }
+          else{
+            //insert into L0BTB
+            ASSERT(0, FALSE);
+          }
+        }
+        else{
+          //late
+          INC_STAT_EVENT(op->proc_id, FUTURE_TAGE_LATE, 1);  
+        }
+      }
+      else {
+        //entry wrong PC
+        INC_STAT_EVENT(op->proc_id, FUTURE_TAGE_EXACTLY_PC_WRONG, 1);  
       }
       break;
     }
-  }
-
-
-  DEBUG(op->proc_id, "Predicting for op_num:%s addr:%s, p_dir:%d, t_dir:%d\n",
-        unsstr64(op->op_num), hexstr64s(pc), hit, op->oracle_info.dir);
+  }  
   
-  return prediction;
+  //if(FUTURE_TAGE_NO_UPDATE){
+  //  for(uint32_t i = 0; i < future_tage_response_delay_queue.size(); i++){
+  //    delay_queue_entry temp = future_tage_response_delay_queue[i];
+  //    if(cycle_count - temp.insert_cycle >= FUTURE_TAGE_LATENCY){
+  //      if(temp.branch_id == op->recovery_info.future_tage_update_id){
+  //        if(temp.future_tage_pred.pc == op->inst_info->addr){
+  //          if(!op->off_path){
+  //            printf("USING: current pc %llx id %lld, pred pc %lx, dir %d, matching id %ld, true_dir %d\n", op->inst_info->addr, op->recovery_info.future_tage_branch_id, temp.future_tage_pred.pc, temp.future_tage_pred.pred, temp.branch_id, op->oracle_info.dir);
+  //          }
+  //          return temp.future_tage_pred.pred;
+  //        }
+  //        else{
+  //          if(!op->off_path){
+  //            printf("NOT MATCH: current pc %llx id %lld, pred pc %lx, dir %d, matching id %ld\n", op->inst_info->addr, op->recovery_info.future_tage_branch_id, temp.future_tage_pred.pc, temp.future_tage_pred.pred, temp.branch_id);
+  //          }
+  //          //this isn't the one, use the l0 btb for prediction
+  //          break;
+  //        }
+  //      }
+  //    }
+  //    else{
+  //      if(!op->off_path){
+  //        printf("LATE: current pc %llx id %lld, pred pc %lx, dir %d, matching id %ld\n", op->inst_info->addr, op->recovery_info.future_tage_branch_id, temp.future_tage_pred.pc, temp.future_tage_pred.pred, temp.branch_id);
+  //      }
+  //      //seen enough, everything after are not ready yet since the queue is ordered
+  //      break;
+  //    }
+  //  }
+  //}
+  //else{
+  //  int nums_to_pop = 0;
+  //  for(uint32_t i = 0; i < future_tage_response_delay_queue.size(); i++){
+  //    delay_queue_entry temp = future_tage_response_delay_queue[i];
+  //    if(cycle_count - temp.insert_cycle >= FUTURE_TAGE_LATENCY){
+  //      if(FUTURE_TAGE_ORACLE_ORDERING){
+  //        if(temp.branch_id > op->recovery_info.future_tage_update_id){
+  //          continue;
+  //        }
+  //      }
+  //      DEBUG(op->proc_id, "updating l0 btb\n");
+  //      if(temp.future_tage_pred.pred){
+  //        Cache_access_result<l0_btb_entry> car_res = l0_btb.probe(op->proc_id, temp.future_tage_pred.pc);
+  //        if(!car_res.hit){
+  //          l0_btb_entry new_entry = {temp.future_tage_pred.pc, op->oracle_info.target, 2, true, false};
+  //          l0_btb.insert(proc_id, temp.future_tage_pred.pc, true, new_entry);
+  //        }
+  //        else{ //replaced an entry when inserting
+  //          if(car_res.data.insert_by_ft && !car_res.data.used){
+  //            INC_STAT_EVENT(op->proc_id, FUTURE_TAGE_VICTIM_NO_TOUCH, 1);  
+  //          }
+  //        }
+  //      }
+  //      else{
+  //        Cache_access_result<l0_btb_entry> car_res = l0_btb.probe(op->proc_id, temp.future_tage_pred.pc);
+  //        if(car_res.hit){
+  //          Cache_access_result<l0_btb_entry> inv_res = l0_btb.invalidate(proc_id, temp.future_tage_pred.pc);
+  //          if(inv_res.hit && inv_res.data.insert_by_ft && inv_res.data.used){
+  //            INC_STAT_EVENT(op->proc_id, FUTURE_TAGE_VICTIM_NO_TOUCH, 1);  
+  //          }
+  //        }
+  //      }
+  //      nums_to_pop++;  
+  //    }
+  //    else{
+  //      break;
+  //    }
+  //  }
+  //  for(int i  = 0; i < nums_to_pop; i++){
+  //    future_tage_response_delay_queue.pop_front();
+  //  }
+  //}
+
+  return btb_prediction;
 }
 
 void bp_real_future_tage_spec_update(Op* op) {
@@ -199,10 +310,18 @@ void bp_real_future_tage_spec_update(Op* op) {
 
 void bp_real_future_tage_update(Op* op) {
   const uns   proc_id      = op->proc_id;
+  Flag skip = false;
   if(op->recovery_info.future_tage_update_id != -1){
-    future_tages.at(proc_id)->commit_state(
-      op->recovery_info.future_tage_update_id, op->inst_info->addr,
-      get_branch_type(proc_id, op->table_info->cf_type), op->oracle_info.dir, op->off_path);
+    if(ffp_blacklist.find(op->inst_info->addr) != ffp_blacklist.end()){
+      if(ffp_blacklist[op->inst_info->addr].counter > FFP_COUNTER_THRESHOLD){
+        skip = true; 
+      }
+    }
+    if(!skip){
+      future_tages.at(proc_id)->commit_state(
+        op->recovery_info.future_tage_update_id, op->inst_info->addr,
+        get_branch_type(proc_id, op->table_info->cf_type), op->oracle_info.dir, op->off_path);
+    }
   }
 
   auto cf_type = op->table_info->cf_type;
@@ -256,6 +375,40 @@ void bp_real_future_tage_update(Op* op) {
 
 void bp_real_future_tage_retire(Op* op) {
   uns proc_id = op->proc_id;
+  if(FUTURE_TAGE_NO_UPDATE){
+    if(op->recovery_info.future_tage_update_id != -1){
+      if(future_tage_response_delay_queue.front().branch_id != op->recovery_info.future_tage_update_id){
+        fprintf(stderr, "queue front id is %ld, trying to retire %lld\n", future_tage_response_delay_queue.front().branch_id, op->recovery_info.future_tage_update_id);
+      }
+      ASSERT(0, future_tage_response_delay_queue.front().branch_id == op->recovery_info.future_tage_update_id);
+      future_tage_response_delay_queue.pop_front();
+    }
+  }
+  if(FUTURE_TAGE_BLACKLIST){
+    if(op->ffp_wrong_btb_correct){
+      auto this_br = ffp_blacklist.find(op->inst_info->addr);
+      if(this_br == ffp_blacklist.end()){
+        blacklist_entry new_entry;
+        new_entry.counter = 1;
+        ffp_blacklist[op->inst_info->addr] = new_entry;
+      }
+      else{
+        ffp_blacklist[op->inst_info->addr].counter += 2;
+      }
+    } 
+    else if(op->ffp_both_correct){
+      auto this_br = ffp_blacklist.find(op->inst_info->addr);
+      if(this_br != ffp_blacklist.end()){
+        ffp_blacklist[op->inst_info->addr].counter += 1;
+      }
+    }
+    else if(op->ffp_correct_btb_wrong){
+      auto this_br = ffp_blacklist.find(op->inst_info->addr);
+      if(this_br != ffp_blacklist.end()){
+        ffp_blacklist[op->inst_info->addr].counter -= 1;
+      }
+    }
+  }
   future_tages.at(proc_id)->commit_state_at_retire_real_stale(
     op->recovery_info.future_tage_branch_id, op->inst_info->addr,
     get_branch_type(proc_id, op->table_info->cf_type), op->oracle_info.dir,
@@ -264,6 +417,22 @@ void bp_real_future_tage_retire(Op* op) {
 
 void bp_real_future_tage_recover(Recovery_Info* recovery_info) {
   uns proc_id = recovery_info->proc_id;
+  auto mispred_id = recovery_info->future_tage_branch_id;
+  int nums_to_pop = 0;
+  if(FUTURE_TAGE_NO_UPDATE){
+    for(uint32_t i = future_tage_response_delay_queue.size() - 1; i >= 0 ; i--){
+      delay_queue_entry temp = future_tage_response_delay_queue[i];
+      if(temp.branch_id > mispred_id){
+        nums_to_pop++;
+      }
+      else{
+        break;
+      }
+    }
+    for(int i = 0; i < nums_to_pop; i++){
+      future_tage_response_delay_queue.pop_back();
+    }
+  }
   future_tages.at(proc_id)->flush_branch_and_repair_state(
     recovery_info->future_tage_branch_id, recovery_info->PC,
     get_branch_type(proc_id, recovery_info->cf_type), recovery_info->new_dir,

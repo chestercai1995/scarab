@@ -72,7 +72,6 @@ class Long_History_Register {
   // Retire speculative bits.
   void retire(int num_retire_bits) {
     //assert(num_retire_bits > 0 && num_retire_bits <= num_speculative_bits_);
-    //printf("retiring branch, num_retire_bits = %d, num_speculative_bits = %d\n\n", num_retire_bits, num_speculative_bits_);
     assert(num_retire_bits <= num_speculative_bits_);
     num_speculative_bits_ -= num_retire_bits;
   }
@@ -581,6 +580,9 @@ class Tage {
     bool longgest_wrong = false;
     bool alt_wrong = false;
     //printf("commit state for %lx, bimodal %d, tagged %d, alt %d, pred_wrong %d\n", br_pc,prediction_info.used_bimodal, prediction_info.used_tagged, prediction_info.used_alt, pred_wrong);
+    if(BP_MECH == TAGESCL_BP){
+      ASSERT(0, br_pc == prediction_info.pred_pc);
+    }
     if(TAGE_CONFIG::USE_STALE_HIST_PC || TAGE_CONFIG::USE_REAL_STALE_HIST_PC){
       if(prediction_info.used_bimodal) {
         int   bimodal_index = (prediction_info.pred_pc ^ (prediction_info.pred_pc >> 2)) &
@@ -657,9 +659,13 @@ class Tage {
         allocate_new_entry = false;
       }
     }
+    if(TAGE_CONFIG::USE_REAL_STALE_HIST_PC || TAGE_CONFIG::USE_STALE_HIST_PC){
+      if(resolve_dir == false){
+        allocate_new_entry = false;
+      }
+    }
 
     if(allocate_new_entry) {
-      //printf("allocating new entry\n");
       int num_extra_entries_to_allocate =
         TAGE_CONFIG::EXTRA_ENTRIES_TO_ALLOCATE;
       int tick_penalty  = 0;
@@ -684,8 +690,10 @@ class Tage {
               bank_entry.tag = tags[i];
               bank_entry.future_pc = br_pc;
               bank_entry.pred_counter.set(resolve_dir ? 0 : -1);
+              //if(TAGE_CONFIG::USE_REAL_STALE_HIST_PC){
+              //  printf("ALLOC new entry on bank %d entry %d, pc is %lx, counter is %d\n", i, indices[i], bank_entry.future_pc, bank_entry.pred_counter.get());
+              //} 
               num_allocated += 1;
-              //printf("allocating on bank %d, index %d\n", i, indices[i]);
               if(num_extra_entries_to_allocate <= 0) {
                 break;
               }
@@ -766,16 +774,33 @@ class Tage {
             alt_matched_entry.pred_counter.update(resolve_dir);
             //printf("updating bank %d index %d, pred_count %d, pc %lx\n", prediction_info.alt_bank, indices[prediction_info.alt_bank], alt_matched_entry.pred_counter.get(), alt_matched_entry.future_pc);
           } else {
-            if(TAGE_CONFIG::USE_STALE_HIST_PC){
+            if(TAGE_CONFIG::USE_STALE_HIST_PC || TAGE_CONFIG::USE_REAL_STALE_HIST_PC){
               update_bimodal_future(prediction_info.pred_pc, br_pc, resolve_dir);
             } else {
-              update_bimodal(br_pc, resolve_dir);
+              update_bimodal(prediction_info.pred_pc, resolve_dir);
             }
           }
         }
       }
-
-      matched_entry.pred_counter.update(resolve_dir);
+      if(TAGE_CONFIG::USE_REAL_STALE_HIST_PC || TAGE_CONFIG::USE_STALE_HIST_PC){
+        if(matched_entry.future_pc == br_pc){
+          matched_entry.pred_counter.update(resolve_dir);
+        }
+        else{
+          if(matched_entry.pred_counter.get() > 0){
+            matched_entry.pred_counter.update(false);
+          }
+          else if(matched_entry.pred_counter.get() < -1){
+            matched_entry.pred_counter.update(true);
+          }
+          else {
+            matched_entry.useful.set(0);
+          }
+        }
+      }
+      else{
+        matched_entry.pred_counter.update(resolve_dir);
+      }
       //printf("updating bank %d index %d, pred_count %d, pc %lx\n", prediction_info.hit_bank, 
       //  indices[prediction_info.hit_bank], matched_entry.pred_counter.get(), matched_entry.future_pc);
       // sign changes: no way it can have been useful
@@ -794,10 +819,10 @@ class Tage {
         }
       }
     } else {
-      if(TAGE_CONFIG::USE_STALE_HIST_PC){
+      if(TAGE_CONFIG::USE_STALE_HIST_PC || TAGE_CONFIG::USE_REAL_STALE_HIST_PC){
         update_bimodal_future(prediction_info.pred_pc, br_pc, resolve_dir);
       } else {
-        update_bimodal(br_pc, resolve_dir);
+        update_bimodal(prediction_info.pred_pc, resolve_dir);
       }
     }
 
@@ -1096,7 +1121,7 @@ void Tage<TAGE_CONFIG>::update_bimodal(uint64_t br_pc, bool resolve_dir) {
 
 template <class TAGE_CONFIG>
 void Tage<TAGE_CONFIG>::update_bimodal_future(uint64_t br_pc, uint64_t future_pc, bool resolve_dir) {
-  assert(TAGE_CONFIG::USE_STALE_HIST_PC);
+  assert(TAGE_CONFIG::USE_STALE_HIST_PC || TAGE_CONFIG::USE_REAL_STALE_HIST_PC);
   int index = (br_pc ^ (br_pc >> 2)) &
               ((1 << TAGE_CONFIG::BIMODAL_LOG_TABLES_SIZE) - 1);
   int8_t bimodal_output =
@@ -1112,15 +1137,17 @@ void Tage<TAGE_CONFIG>::update_bimodal_future(uint64_t br_pc, uint64_t future_pc
     (bimodal_output & 1);
   if(bimodal_table_[index].future_pc != future_pc){
     if(bimodal_table_[index].useful.get() == 0){
-      bimodal_table_[index].future_pc = future_pc;
-      bimodal_table_[index].useful.set(1);
-      //printf("allocating new bimodal entry at index %d\n", index);
+      if(resolve_dir == true){
+        bimodal_table_[index].future_pc = future_pc;
+        bimodal_table_[index].useful.set(1);
+        bimodal_table_[index].prediction = resolve_dir ? 1 : 0;
+        //printf("ALLOC new bimodal entry %d, pc is %lx, counter is %d\n", index, future_pc, bimodal_table_[index].prediction);
+      }
     }
     else{
       bimodal_table_[index].useful.set(0);
     }
   }
-  //printf("updating bimodal index %d, pc is %lx, useful %d\n", index, bimodal_table_[index].future_pc, bimodal_table_[index].useful.get());
 }
 
 template <class TAGE_CONFIG>

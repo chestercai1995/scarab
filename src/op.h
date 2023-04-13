@@ -296,6 +296,11 @@ struct Op_struct {
   Flag recovery_scheduled;
   Flag redirect_scheduled;
   // }}}
+
+  Flag ffp_wrong_btb_correct;
+  Flag ffp_correct_btb_wrong;
+  Flag ffp_both_correct;
+  uns ffp_recent_hist_hash;
 };
 // }}}
 

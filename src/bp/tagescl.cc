@@ -72,12 +72,31 @@ void bp_tagescl_init() {
   if(tagescl_predictors.size() == 0) {
     tagescl_predictors.reserve(NUM_CORES);
     for(uns i = 0; i < NUM_CORES; ++i) {
-      if(BP_MECH == TAGESCL_BP) {
-        tagescl_predictors.push_back(
-          std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_64KB>>(NODE_TABLE_SIZE));
-      } else {
-        tagescl_predictors.push_back(
-          std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_80KB>>(NODE_TABLE_SIZE));
+      if(BP_TAGE_SIZE == 64 || BP_TAGE_SIZE == 80){
+        if(BP_MECH == TAGESCL_BP) {
+          tagescl_predictors.push_back(
+            std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_64KB>>(NODE_TABLE_SIZE));
+        } else {
+          tagescl_predictors.push_back(
+            std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_80KB>>(NODE_TABLE_SIZE));
+        }
+      }
+      else{
+        if(BP_TAGE_SIZE == 96){
+          tagescl_predictors.push_back(
+            std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_96KB_V3>>(NODE_TABLE_SIZE));
+        }
+        else if(BP_TAGE_SIZE == 128){
+          tagescl_predictors.push_back(
+            std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_128KB_V3>>(NODE_TABLE_SIZE));
+        }
+        else if(BP_TAGE_SIZE == 192){
+          tagescl_predictors.push_back(
+            std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_192KB_V3>>(NODE_TABLE_SIZE));
+        }
+        else{
+          ASSERT(0, FALSE);
+        }
       }
     }
   }
