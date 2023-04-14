@@ -105,6 +105,8 @@ DEF_STAT(  FFP_WRONG_UNDER_FULL_BP_FLUSH  , COUNT   , NO_RATIO       )
 DEF_STAT(  FFP_WRONG_UNDER_LATE_BP_FLUSH  , COUNT   , NO_RATIO       )
 DEF_STAT(  FFP_HASH_DIST0                 , COUNT   , NO_RATIO       )
 DEF_STAT(  FFP_HASH_DIST1                 , COUNT   , NO_RATIO       )
+DEF_STAT(  FFP_HASH_DIST2                 , COUNT   , NO_RATIO       )
+DEF_STAT(  FFP_HASH_DIST3                 , COUNT   , NO_RATIO       )
 
 
 DEF_STAT(  FUTURE_TAGE_TRUE_LATE    , COUNT   , NO_RATIO       )

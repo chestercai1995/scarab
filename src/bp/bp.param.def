@@ -79,6 +79,8 @@ DEF_PARAM(  future_tage_oracle_ordering, FUTURE_TAGE_ORACLE_ORDERING, Flag    , 
 DEF_PARAM(  future_tage_no_update     , FUTURE_TAGE_NO_UPDATE     , Flag    , Flag       , FALSE      ,        )
 DEF_PARAM(  ffp_enable_gshare_base    , FFP_ENABLE_GSHARE_BASE    , Flag    , Flag       , FALSE      ,        )
 DEF_PARAM(  ffp_use_loop              , FFP_USE_LOOP              , Flag    , Flag       , TRUE       ,        )
+DEF_PARAM(  ffp_num_tage              , FFP_NUM_TAGE              , uns     , uns        , 2          ,        )
+DEF_PARAM(  ffp_hash_pc_bits          , FFP_HASH_PC_BITS          , uns     , uns        , 2          ,        )
 DEF_PARAM(  hist_length               , HIST_LENGTH               , uns     , uns        , 16         ,        )
 DEF_PARAM(  pht_ctr_bits              , PHT_CTR_BITS              , uns     , uns        , 2          , const  ) /* const */
 DEF_PARAM(  bht_entries               , BHT_ENTRIES               , uns     , uns        , (4 * 1024) ,        )
