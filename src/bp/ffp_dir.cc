@@ -124,21 +124,99 @@ void bp_ffp_dir_init() {
             std::make_unique<Tage_SC_L<TAGE_SC_CONFIG_64KB_ffp>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
         }
       }
-      //else if(FUTURE_TAGE_SIZE_KB == 48){
-      //  future_tages.push_back(
-      //    std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_48KB>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
-      //}
-      //else if(FUTURE_TAGE_SIZE_KB == 32){
-      //  future_tages.push_back(
-      //    std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_32KB>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
-      //}
+      else if(FUTURE_TAGE_SIZE_KB == 48){
+        future_tages.push_back(
+          std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_48KB>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
+      }
+      else if(FUTURE_TAGE_SIZE_KB == 40){
+        future_tages.push_back(
+          std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_40KB>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
+      }
+      else if(FUTURE_TAGE_SIZE_KB == 321){
+        if(FFP_USE_LOOP){
+          if(FFP_USE_SC){
+            future_tages.push_back(
+              std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_32KB>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
+          }
+          else{
+            future_tages.push_back(
+              std::make_unique<Tage_SC_L<TAGE_L_CONFIG_32KB>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
+          }
+        }
+        else{
+          if(FFP_USE_SC){
+            future_tages.push_back(
+              std::make_unique<Tage_SC_L<TAGE_SC_CONFIG_32KB>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
+          }
+          else{
+            future_tages.push_back(
+              std::make_unique<Tage_SC_L<TAGE_CONFIG_32KB>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
+          }
+        }
+      }
+      else if(FUTURE_TAGE_SIZE_KB == 322){
+        future_tages.push_back(
+          std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_32KB_V2>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
+      }
+      else if(FUTURE_TAGE_SIZE_KB == 323){
+        future_tages.push_back(
+          std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_32KB_V3>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
+      }
+      else if(FUTURE_TAGE_SIZE_KB == 324){
+        future_tages.push_back(
+          std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_32KB_V4>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
+      }
+      else if(FUTURE_TAGE_SIZE_KB == 325){
+        future_tages.push_back(
+          std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_32KB_V5>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
+      }
+      else if(FUTURE_TAGE_SIZE_KB == 161){
+        if(FFP_USE_LOOP){
+          if(FFP_USE_SC){
+            future_tages.push_back(
+              std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_16KB>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
+          }
+          else{
+            future_tages.push_back(
+              std::make_unique<Tage_SC_L<TAGE_L_CONFIG_16KB>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
+          }
+        }
+        else{
+          if(FFP_USE_SC){
+            future_tages.push_back(
+              std::make_unique<Tage_SC_L<TAGE_SC_CONFIG_16KB>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
+          }
+          else{
+            future_tages.push_back(
+              std::make_unique<Tage_SC_L<TAGE_CONFIG_16KB>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
+          }
+        }
+      }
+      else if(FUTURE_TAGE_SIZE_KB == 81){
+        if(FFP_USE_LOOP){
+          if(FFP_USE_SC){
+            future_tages.push_back(
+              std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_8KB>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
+          }
+          else{
+            future_tages.push_back(
+              std::make_unique<Tage_SC_L<TAGE_L_CONFIG_8KB>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
+          }
+        }
+        else{
+          if(FFP_USE_SC){
+            future_tages.push_back(
+              std::make_unique<Tage_SC_L<TAGE_SC_CONFIG_8KB>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
+          }
+          else{
+            future_tages.push_back(
+              std::make_unique<Tage_SC_L<TAGE_CONFIG_8KB>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
+          }
+        }
+      }
       //else if(FUTURE_TAGE_SIZE_KB == 16){
       //  future_tages.push_back(
       //    std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_16KB>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
-      //}
-      //else if(FUTURE_TAGE_SIZE_KB == 8){
-      //  future_tages.push_back(
-      //    std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_8KB>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
       //}
       else {
         ASSERT(0, false);

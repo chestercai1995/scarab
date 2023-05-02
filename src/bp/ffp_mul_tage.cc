@@ -141,6 +141,10 @@ uns get_recent_hist_hash(Op* op){
       res = res & 0x03;
     }
   }
+  if(FFP_NUM_TAGE == 4){
+    res = res ^ (op->inst_info->addr) ^ (op->inst_info->addr >> 2);
+    res = res & 0x03;
+  }
   //printf("\nres is %u\n", res);
   return res;
 }
@@ -213,6 +217,12 @@ void bp_ffp_mul_tage_init() {
             std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_32KB_V5>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
           future_tages1.push_back(
             std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_32KB_V5>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
+        }
+        else if (FUTURE_TAGE_SIZE_KB == 128) {
+          future_tages0.push_back(
+            std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_64KB>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
+          future_tages1.push_back(
+            std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_64KB>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
         }
         else{
           ASSERT(0, FALSE);
