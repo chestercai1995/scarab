@@ -48,10 +48,7 @@ struct l0_btb_entry {
 };
 
 struct delay_queue_entry{
-  Flag future_tage_pred0;
-  Flag future_tage_pred1;
-  Flag future_tage_pred2;
-  Flag future_tage_pred3;
+  std::vector<Flag> future_tage_preds;
   int64_t branch_id;
   uint64_t insert_cycle;
   uint64_t br_pc;
@@ -79,10 +76,7 @@ int64_t last_late_bp_flush_id;
 
 std::vector<Cache_cpp<l0_btb_entry>> l0_across_all_cores;
 // A vector of TAGE-SC-L tables. One table per core.
-std::vector<std::unique_ptr<Tage_SC_L_Base>> future_tages0;
-std::vector<std::unique_ptr<Tage_SC_L_Base>> future_tages1;
-std::vector<std::unique_ptr<Tage_SC_L_Base>> future_tages2;
-std::vector<std::unique_ptr<Tage_SC_L_Base>> future_tages3;
+std::vector<std::vector<std::unique_ptr<Tage_SC_L_Base>>> future_tages;
 
 std::deque<delay_queue_entry> future_tage_response_delay_queue;
 
@@ -134,11 +128,16 @@ uns get_recent_hist_hash(Op* op){
         current = current >> 1;
       }
     }
-    else{
-      ASSERT(0, FFP_NUM_TAGE == 4);
+    else if (FFP_NUM_TAGE == 4) {
       res = res ^ future_tage_response_delay_queue[i].current_pred;
       res = res ^ current ^ (current >> 2);
       res = res & 0x03;
+    }
+    else{
+      ASSERT(0, FFP_NUM_TAGE == 8);
+      res = res ^ future_tage_response_delay_queue[i].current_pred;
+      res = res ^ current ^ (current >> 3);
+      res = res & 0x07;
     }
   }
   //printf("\nres is %u\n", res);
@@ -162,119 +161,115 @@ uns get_recent_hist_hash_at_update(Op* op){
         current = current >> 1;
       }
     }
-    else{
-      ASSERT(0, FFP_NUM_TAGE == 4);
+    else if (FFP_NUM_TAGE == 4) {
       res = res ^ future_tage_response_delay_queue[i].current_pred;
       res = res ^ current ^ (current >> 2);
       res = res & 0x03;
     }
+    else{
+      res = res ^ future_tage_response_delay_queue[i].current_pred;
+      res = res ^ current ^ (current >> 3);
+      res = res & 0x07;
+    }
   }
+  ASSERT(0, res < FFP_NUM_TAGE);
   //printf("\nres is %u\n", res);
   return res;
 }
 }  // end of anonymous namespace
 
 void bp_ffp_mul_tage_init() {
-  if(future_tages0.size() == 0) {
-    future_tages0.reserve(NUM_CORES);
-    future_tages1.reserve(NUM_CORES);
-    if(FFP_NUM_TAGE == 4){
-      future_tages2.reserve(NUM_CORES);
-      future_tages3.reserve(NUM_CORES);
+  if(future_tages.size() == 0){
+    future_tages.resize(NUM_CORES);
+    for(uns i = 0; i < NUM_CORES; i++){
+      future_tages[i].reserve(FFP_NUM_TAGE);
     }
-    for(uns i = 0; i < NUM_CORES; ++i) {
-      if(FFP_NUM_TAGE == 2){
-        if(FUTURE_TAGE_SIZE_KB == 641){
-          future_tages0.push_back(
-            std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_32KB>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
-          future_tages1.push_back(
-            std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_32KB>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
-        }
-        else if (FUTURE_TAGE_SIZE_KB == 642) {
-          future_tages0.push_back(
-            std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_32KB_V2>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
-          future_tages1.push_back(
-            std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_32KB_V2>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
-        }
-        else if (FUTURE_TAGE_SIZE_KB == 643) {
-          future_tages0.push_back(
-            std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_32KB_V3>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
-          future_tages1.push_back(
-            std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_32KB_V3>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
-        }
-        else if (FUTURE_TAGE_SIZE_KB == 644) {
-          future_tages0.push_back(
-            std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_32KB_V4>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
-          future_tages1.push_back(
-            std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_32KB_V4>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
-        }
-        else if (FUTURE_TAGE_SIZE_KB == 645) {
-          future_tages0.push_back(
-            std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_32KB_V5>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
-          future_tages1.push_back(
-            std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_32KB_V5>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
-        }
-        else{
-          ASSERT(0, FALSE);
-        }
+    if(FFP_MUL_PORT) {
+      ASSERT(0, NUM_CORES == 1);
+      if(FUTURE_TAGE_SIZE_KB == 64){
+        future_tages[0].push_back(
+          std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_64KB>>((NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE) * FFP_NUM_TAGE));
       }
-      else if(FFP_NUM_TAGE == 4){
-        if(FUTURE_TAGE_SIZE_KB == 641){
-          future_tages0.push_back(
-            std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_16KB>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
-          future_tages1.push_back(
-            std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_16KB>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
-          future_tages2.push_back(
-            std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_16KB>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
-          future_tages3.push_back(
-            std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_16KB>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
-        }
-        else if (FUTURE_TAGE_SIZE_KB == 642) {
-          future_tages0.push_back(
-            std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_16KB_V2>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
-          future_tages1.push_back(
-            std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_16KB_V2>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
-          future_tages2.push_back(
-            std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_16KB_V2>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
-          future_tages3.push_back(
-            std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_16KB_V2>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
-        }
-        else if (FUTURE_TAGE_SIZE_KB == 643) {
-          future_tages0.push_back(
-            std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_16KB_V3>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
-          future_tages1.push_back(
-            std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_16KB_V3>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
-          future_tages2.push_back(
-            std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_16KB_V3>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
-          future_tages3.push_back(
-            std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_16KB_V3>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
-        }
-        else if (FUTURE_TAGE_SIZE_KB == 644) {
-          future_tages0.push_back(
-            std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_16KB_V4>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
-          future_tages1.push_back(
-            std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_16KB_V4>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
-          future_tages2.push_back(
-            std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_16KB_V4>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
-          future_tages3.push_back(
-            std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_16KB_V4>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
-        }
-        else if (FUTURE_TAGE_SIZE_KB == 645) {
-          future_tages0.push_back(
-            std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_16KB_V5>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
-          future_tages1.push_back(
-            std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_16KB_V5>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
-          future_tages2.push_back(
-            std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_16KB_V5>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
-          future_tages3.push_back(
-            std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_16KB_V5>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
-        }
-        else{
-          ASSERT(0, FALSE);
-        }
-
+      //else if(FUTURE_TAGE_SIZE_KB == 128){
+      //  ASSERT(0, NUM_CORES == 1);
+      //  future_tages[0].push_back(
+      //    std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_128KB>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
+      //}
+      else{
+        ASSERT(0, FALSE);
       }
       l0_across_all_cores.push_back(Cache_cpp<l0_btb_entry>("l0_btb", L0_BTB_SIZE, L0_BTB_ASSOC, 1, SRRIP_REPL));
+    }
+    else{
+      for(uns i = 0; i < NUM_CORES; i++){
+        if(FFP_NUM_TAGE == 1){
+          if(FUTURE_TAGE_SIZE_KB == 64){
+            future_tages[i].push_back(
+              std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_64KB>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
+          }
+          //else if(FUTURE_TAGE_SIZE_KB == 128){
+          //  future_tages[i].push_back(
+          //    std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_128KB>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
+          //}
+          ASSERT(0, FALSE);
+        }
+        else if(FFP_NUM_TAGE == 2){
+          if(FUTURE_TAGE_SIZE_KB == 641){
+            for(uns j = 0; j < FFP_NUM_TAGE; j++){
+              future_tages[i].push_back(
+                std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_32KB>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
+            }
+          }
+          else{
+            ASSERT(0, FALSE);
+          }
+        }
+        else if(FFP_NUM_TAGE == 4){
+          if(FUTURE_TAGE_SIZE_KB == 641){
+            for(uns j = 0; j < FFP_NUM_TAGE; j++){
+              future_tages[i].push_back(
+                std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_16KB>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
+            }
+          }
+          else if (FUTURE_TAGE_SIZE_KB == 128) {
+            for(uns j = 0; j < FFP_NUM_TAGE; j++){
+              future_tages[i].push_back(
+                std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_32KB>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
+            }
+          }
+          else if (FUTURE_TAGE_SIZE_KB == 256) {
+            for(uns j = 0; j < FFP_NUM_TAGE; j++){
+              future_tages[i].push_back(
+                std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_64KB>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
+            }
+          }
+          else{
+            ASSERT(0, FALSE);
+          }
+
+        }
+        else if(FFP_NUM_TAGE == 8){
+          if (FUTURE_TAGE_SIZE_KB == 128) {
+            for(uns j = 0; j < FFP_NUM_TAGE; j++){
+              future_tages[i].push_back(
+                std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_16KB>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
+            }
+          }
+          else if (FUTURE_TAGE_SIZE_KB == 256) {
+            for(uns j = 0; j < FFP_NUM_TAGE; j++){
+              future_tages[i].push_back(
+                std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_32KB>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
+            }
+          }
+          else if (FUTURE_TAGE_SIZE_KB == 512) {
+            for(uns j = 0; j < FFP_NUM_TAGE; j++){
+              future_tages[i].push_back(
+                std::make_unique<Tage_SC_L<TAGE_SC_L_CONFIG_64KB>>(NODE_TABLE_SIZE + STALE_HISTORY_DISTANCE));
+            }
+          }
+        }
+        l0_across_all_cores.push_back(Cache_cpp<l0_btb_entry>("l0_btb", L0_BTB_SIZE, L0_BTB_ASSOC, 1, SRRIP_REPL));
+      }
     }
   }
   gshare_state_all_cores.resize(NUM_CORES);
@@ -283,39 +278,36 @@ void bp_ffp_mul_tage_init() {
   }
   ASSERT(0, BP_UPDATE_AT_RETIRE);
   ASSERT(0, STALE_HISTORY_DISTANCE != 0);
-  ASSERTM(0, future_tages0.size() == NUM_CORES,
+  ASSERTM(0, future_tages.size() == NUM_CORES,
           "future_tages not initialized correctly");
-  ASSERTM(0, future_tages1.size() == NUM_CORES,
+  if(!FFP_MUL_PORT){
+    ASSERTM(0, future_tages[0].size() == FFP_NUM_TAGE,
           "future_tages not initialized correctly");
-  if(FFP_NUM_TAGE == 4){
-    ASSERTM(0, future_tages2.size() == NUM_CORES,
-            "future_tages not initialized correctly");
-    ASSERTM(0, future_tages3.size() == NUM_CORES,
-            "future_tages not initialized correctly");
+  }
+  else{
+    ASSERTM(0, future_tages[0].size() == 1,
+          "future_tages not initialized correctly");
   }
 }
 
 void bp_ffp_mul_tage_timestamp(Op* op) { 
   uns proc_id = op->proc_id;
-  int64_t old_id = future_tages0.at(proc_id)->get_old_branch_id(STALE_HISTORY_DISTANCE);
-  int64_t new_id = future_tages0.at(proc_id)->get_new_branch_id(op->off_path);
-  int64_t old_id_v1 = future_tages1.at(proc_id)->get_old_branch_id(STALE_HISTORY_DISTANCE);
-  int64_t new_id_v1 = future_tages1.at(proc_id)->get_new_branch_id(op->off_path);
-  if(FFP_NUM_TAGE == 4){
-    int64_t old_id_v2 = future_tages2.at(proc_id)->get_old_branch_id(STALE_HISTORY_DISTANCE);
-    int64_t new_id_v2 = future_tages2.at(proc_id)->get_new_branch_id(op->off_path);
-    int64_t old_id_v3 = future_tages3.at(proc_id)->get_old_branch_id(STALE_HISTORY_DISTANCE);
-    int64_t new_id_v3 = future_tages3.at(proc_id)->get_new_branch_id(op->off_path);
-    ASSERT(0, old_id == old_id_v2);
-    ASSERT(0, new_id == new_id_v2);
-    ASSERT(0, old_id == old_id_v3);
-    ASSERT(0, new_id == new_id_v3);
+  int64_t old_id = future_tages[proc_id].at(0)->get_old_branch_id(STALE_HISTORY_DISTANCE);
+  int64_t new_id = future_tages[proc_id].at(0)->get_new_branch_id(op->off_path);
+  if(!FFP_MUL_PORT){
+    for(uns i = 1; i < FFP_NUM_TAGE; i++){
+      ASSERT(proc_id, old_id == future_tages[proc_id].at(i)->get_old_branch_id(STALE_HISTORY_DISTANCE));
+      ASSERT(proc_id, new_id == future_tages[proc_id].at(i)->get_new_branch_id(op->off_path));
+    }
   }
-  ASSERT(0, old_id == old_id_v1);
-  ASSERT(0, new_id == new_id_v1);
+  else{
+    for(uns i = 1; i < FFP_NUM_TAGE; i++){
+      ASSERT(proc_id, old_id + i == future_tages[proc_id].at(0)->get_old_branch_id(STALE_HISTORY_DISTANCE));
+      ASSERT(proc_id, new_id + i == future_tages[proc_id].at(0)->get_new_branch_id(op->off_path));
+    }
+  }
   op->recovery_info.future_tage_branch_id = new_id;
   op->recovery_info.future_tage_update_id = old_id;
-  //fprintf(stderr, "timestamp, br received id %lu, update id %lu\n", new_id, old_id);
 }
 
 uns8 bp_ffp_mul_tage_pred(Op* op) {
@@ -328,27 +320,23 @@ uns8 bp_ffp_mul_tage_pred(Op* op) {
   DEBUG(proc_id, "Predicting for op_num:%s addr:%s, p_dir:%d, t_dir:%d\n",
         unsstr64(op->op_num), hexstr64s(pc), hit, op->oracle_info.dir);
 
-
-  Flag future_tage_res0 = future_tages0.at(proc_id)->get_prediction(
-    op->recovery_info.future_tage_branch_id, op->inst_info->addr);
-  Flag future_tage_res1 = future_tages1.at(proc_id)->get_prediction(
-    op->recovery_info.future_tage_branch_id, op->inst_info->addr);
-  Flag future_tage_res2 = false;
-  Flag future_tage_res3 = false;
-  if(FFP_NUM_TAGE == 4){
-    future_tage_res2 = future_tages2.at(proc_id)->get_prediction(
-      op->recovery_info.future_tage_branch_id, op->inst_info->addr);
-    future_tage_res3 = future_tages3.at(proc_id)->get_prediction(
-      op->recovery_info.future_tage_branch_id, op->inst_info->addr);
+  delay_queue_entry temp_entry;
+  temp_entry.future_tage_preds.resize(FFP_NUM_TAGE);
+  if(FFP_MUL_PORT){
+    for(uns i = 0; i < FFP_NUM_TAGE; i++){
+      temp_entry.future_tage_preds[i] = future_tages[proc_id].at(0)->get_prediction(
+        op->recovery_info.future_tage_branch_id + i, op->inst_info->addr + i);
+    }
+  }
+  else{
+    for(uns i = 0; i < FFP_NUM_TAGE; i++){
+      temp_entry.future_tage_preds[i] = future_tages[proc_id].at(i)->get_prediction(
+        op->recovery_info.future_tage_branch_id, op->inst_info->addr);
+    }
   }
   
   DEBUG(op->proc_id, "future tage on op %llu, pc is %lx, pred is %d\n", op->op_num, future_tage_res.pc, future_tage_res.pred);
 
-  delay_queue_entry temp_entry;
-  temp_entry.future_tage_pred0 = future_tage_res0;
-  temp_entry.future_tage_pred1 = future_tage_res1;
-  temp_entry.future_tage_pred2 = future_tage_res2;
-  temp_entry.future_tage_pred3 = future_tage_res3;
   temp_entry.br_pc = op->inst_info->addr;
   temp_entry.insert_cycle = cycle_count;
   temp_entry.branch_id = op->recovery_info.future_tage_branch_id;
@@ -403,21 +391,7 @@ uns8 bp_ffp_mul_tage_pred(Op* op) {
     if(element.branch_id == op->recovery_info.future_tage_update_id){
       found_it = true;
       Flag fft_final_pred = FALSE;
-      if(fft_picker == 0){
-        fft_final_pred = element.future_tage_pred0;
-      }
-      else if(fft_picker == 1){
-        fft_final_pred = element.future_tage_pred1;
-      }
-      else if(fft_picker == 2){
-        fft_final_pred = element.future_tage_pred2;
-      }
-      else if(fft_picker == 3){
-        fft_final_pred = element.future_tage_pred3;
-      }
-      else{
-        ASSERT(0, FALSE);
-      }
+      fft_final_pred = element.future_tage_preds[fft_picker];
       if(cycle_count - element.insert_cycle >= FUTURE_TAGE_LATENCY){
         if(!op->off_path){
           if(fft_final_pred == op->oracle_info.dir){
@@ -455,30 +429,19 @@ uns8 bp_ffp_mul_tage_pred(Op* op) {
 void bp_ffp_mul_tage_spec_update(Op* op) {
   uns proc_id = op->proc_id;
   
-  future_tages0.at(proc_id)->update_speculative_state(
-    op->recovery_info.branch_id, op->inst_info->addr,
-    get_branch_type(proc_id, op->table_info->cf_type), op->oracle_info.pred,
-    op->oracle_info.target);
-  future_tages1.at(proc_id)->update_speculative_state(
-    op->recovery_info.branch_id, op->inst_info->addr,
-    get_branch_type(proc_id, op->table_info->cf_type), op->oracle_info.pred,
-    op->oracle_info.target);
-  if(FFP_NUM_TAGE == 4){
-    future_tages2.at(proc_id)->update_speculative_state(
-      op->recovery_info.branch_id, op->inst_info->addr,
-      get_branch_type(proc_id, op->table_info->cf_type), op->oracle_info.pred,
-      op->oracle_info.target);
-    future_tages3.at(proc_id)->update_speculative_state(
+  if(FFP_MUL_PORT){
+    future_tages[proc_id].at(0)->update_speculative_state(
       op->recovery_info.branch_id, op->inst_info->addr,
       get_branch_type(proc_id, op->table_info->cf_type), op->oracle_info.pred,
       op->oracle_info.target);
   }
-  if(future_tage_response_delay_queue.back().branch_id != op->recovery_info.future_tage_branch_id){
-    printf("current id %lld, back of q id %ld, q has: ", op->recovery_info.future_tage_branch_id, future_tage_response_delay_queue.back().branch_id);
-    for(auto& element : future_tage_response_delay_queue){
-      printf("%ld, ", element.branch_id); 
+  else{
+    for(uns i = 0; i < FFP_NUM_TAGE; i++){
+      future_tages[proc_id].at(i)->update_speculative_state(
+        op->recovery_info.branch_id, op->inst_info->addr,
+        get_branch_type(proc_id, op->table_info->cf_type), op->oracle_info.pred,
+        op->oracle_info.target);
     }
-    printf("\n");
   }
   ASSERT(0, future_tage_response_delay_queue.back().branch_id == op->recovery_info.future_tage_branch_id);
   future_tage_response_delay_queue.back().current_pred = op->oracle_info.pred;
@@ -492,34 +455,15 @@ void bp_ffp_mul_tage_update(Op* op) {
     if(op->recovery_info.future_tage_update_id != -1){
       //printf("computing hash at update for op %llu, br_id %lld: ", op->op_num, op->recovery_info.future_tage_branch_id);
       ASSERT(0, get_recent_hist_hash_at_update(op) == op->ffp_recent_hist_hash);
-      if(op->ffp_recent_hist_hash == 0){
-        future_tages0.at(proc_id)->commit_state(
-          op->recovery_info.future_tage_update_id, op->inst_info->addr,
+      if(FFP_MUL_PORT){
+        future_tages[proc_id].at(0)->commit_state(
+          op->recovery_info.future_tage_update_id + op->ffp_recent_hist_hash, op->inst_info->addr + op->ffp_recent_hist_hash,
           get_branch_type(proc_id, op->table_info->cf_type), op->oracle_info.dir, op->off_path);
-          INC_STAT_EVENT(op->proc_id, FFP_HASH_DIST0, 1);  
-      }
-      else if(op->ffp_recent_hist_hash == 1){
-        future_tages1.at(proc_id)->commit_state(
-          op->recovery_info.future_tage_update_id, op->inst_info->addr,
-          get_branch_type(proc_id, op->table_info->cf_type), op->oracle_info.dir, op->off_path);
-          INC_STAT_EVENT(op->proc_id, FFP_HASH_DIST1, 1);  
-      }
-      else if(op->ffp_recent_hist_hash == 2){
-        ASSERT(0, FFP_NUM_TAGE == 4);
-        future_tages2.at(proc_id)->commit_state(
-          op->recovery_info.future_tage_update_id, op->inst_info->addr,
-          get_branch_type(proc_id, op->table_info->cf_type), op->oracle_info.dir, op->off_path);
-          INC_STAT_EVENT(op->proc_id, FFP_HASH_DIST2, 1);  
-      }
-      else if(op->ffp_recent_hist_hash == 3){
-        ASSERT(0, FFP_NUM_TAGE == 4);
-        future_tages3.at(proc_id)->commit_state(
-          op->recovery_info.future_tage_update_id, op->inst_info->addr,
-          get_branch_type(proc_id, op->table_info->cf_type), op->oracle_info.dir, op->off_path);
-          INC_STAT_EVENT(op->proc_id, FFP_HASH_DIST3, 1);  
       }
       else{
-        ASSERT(0, FALSE);
+        future_tages[proc_id].at(op->ffp_recent_hist_hash)->commit_state(
+          op->recovery_info.future_tage_update_id, op->inst_info->addr,
+          get_branch_type(proc_id, op->table_info->cf_type), op->oracle_info.dir, op->off_path);
       }
     }
 
@@ -602,30 +546,29 @@ void bp_ffp_mul_tage_retire(Op* op) {
   //else{
   //  fprintf(stderr, "retire br with update id -1, br id %lld\n", op->recovery_info.future_tage_branch_id);
   //}
-  future_tages0.at(proc_id)->commit_state_at_retire_real_stale(
-    op->recovery_info.future_tage_branch_id, op->inst_info->addr,
-    get_branch_type(proc_id, op->table_info->cf_type), op->oracle_info.dir,
-    op->oracle_info.target, op->recovery_info.future_tage_update_id);
-  future_tages1.at(proc_id)->commit_state_at_retire_real_stale(
-    op->recovery_info.future_tage_branch_id, op->inst_info->addr,
-    get_branch_type(proc_id, op->table_info->cf_type), op->oracle_info.dir,
-    op->oracle_info.target, op->recovery_info.future_tage_update_id);
-  if(FFP_NUM_TAGE == 4){
-    future_tages2.at(proc_id)->commit_state_at_retire_real_stale(
-      op->recovery_info.future_tage_branch_id, op->inst_info->addr,
-      get_branch_type(proc_id, op->table_info->cf_type), op->oracle_info.dir,
-      op->oracle_info.target, op->recovery_info.future_tage_update_id);
-    future_tages3.at(proc_id)->commit_state_at_retire_real_stale(
-      op->recovery_info.future_tage_branch_id, op->inst_info->addr,
-      get_branch_type(proc_id, op->table_info->cf_type), op->oracle_info.dir,
-      op->oracle_info.target, op->recovery_info.future_tage_update_id);
+  if(FFP_MUL_PORT){
+    for(uns i = 0; i < FFP_NUM_TAGE; i++){
+      fprintf(stderr, "retire id %lld\n", op->recovery_info.future_tage_branch_id + i);
+      future_tages[proc_id].at(0)->commit_state_at_retire_real_stale(
+        op->recovery_info.future_tage_branch_id + i, op->inst_info->addr,
+        get_branch_type(proc_id, op->table_info->cf_type), op->oracle_info.dir,
+        op->oracle_info.target, op->recovery_info.future_tage_update_id);
+    }
+  }
+  else{
+    for(uns i = 0; i < FFP_NUM_TAGE; i++){
+      future_tages[proc_id].at(i)->commit_state_at_retire_real_stale(
+        op->recovery_info.future_tage_branch_id, op->inst_info->addr,
+        get_branch_type(proc_id, op->table_info->cf_type), op->oracle_info.dir,
+        op->oracle_info.target, op->recovery_info.future_tage_update_id);
+    }
   }
 }
 
 void bp_ffp_mul_tage_recover(Recovery_Info* recovery_info) {
   uns proc_id = recovery_info->proc_id;
   auto mispred_id = recovery_info->future_tage_branch_id;
-  int nums_to_pop = 0;
+  uns nums_to_pop = 0;
   for(uint32_t i = future_tage_response_delay_queue.size() - 1; i >= 0 ; i--){
     delay_queue_entry temp = future_tage_response_delay_queue[i];
     if(temp.branch_id > mispred_id){
@@ -636,30 +579,26 @@ void bp_ffp_mul_tage_recover(Recovery_Info* recovery_info) {
     }
   }
   //fprintf(stderr, "mispred id: %lld, ", mispred_id);
-  for(int i = 0; i < nums_to_pop; i++){
+  for(uns i = 0; i < nums_to_pop; i++){
     //fprintf(stderr, "popping id %ld", future_tage_response_delay_queue.back().branch_id);
     future_tage_response_delay_queue.pop_back();
   }
   ASSERT(0, future_tage_response_delay_queue.back().branch_id == mispred_id);
   future_tage_response_delay_queue.back().current_pred = !future_tage_response_delay_queue.back().current_pred;
   //fprintf(stderr, "\n");
-  future_tages0.at(proc_id)->flush_branch_and_repair_state(
-    recovery_info->future_tage_branch_id, recovery_info->PC,
-    get_branch_type(proc_id, recovery_info->cf_type), recovery_info->new_dir,
-    recovery_info->branchTarget);
-  future_tages1.at(proc_id)->flush_branch_and_repair_state(
-    recovery_info->future_tage_branch_id, recovery_info->PC,
-    get_branch_type(proc_id, recovery_info->cf_type), recovery_info->new_dir,
-    recovery_info->branchTarget);
-  if(FFP_NUM_TAGE == 4){
-    future_tages2.at(proc_id)->flush_branch_and_repair_state(
-      recovery_info->future_tage_branch_id, recovery_info->PC,
+  if(FFP_MUL_PORT){
+    future_tages[proc_id].at(0)->flush_branch_and_repair_state(
+      recovery_info->future_tage_branch_id + FFP_NUM_TAGE - 1, recovery_info->PC,
       get_branch_type(proc_id, recovery_info->cf_type), recovery_info->new_dir,
       recovery_info->branchTarget);
-    future_tages3.at(proc_id)->flush_branch_and_repair_state(
-      recovery_info->future_tage_branch_id, recovery_info->PC,
-      get_branch_type(proc_id, recovery_info->cf_type), recovery_info->new_dir,
-      recovery_info->branchTarget);
+  } 
+  else{
+    for(uns i = 0; i < FFP_NUM_TAGE; i++){
+      future_tages[proc_id].at(i)->flush_branch_and_repair_state(
+        recovery_info->future_tage_branch_id, recovery_info->PC,
+        get_branch_type(proc_id, recovery_info->cf_type), recovery_info->new_dir,
+        recovery_info->branchTarget);
+    }
   }
   if(recovery_info->late_bp_recovery){
     last_late_bp_flush_id = mispred_id;
